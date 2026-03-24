@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SectionTitle from "@/components/SectionTitle";
 import Image from "next/image";
+import ContactForm from "@/components/ContactForm";
 
 export default async function ContactPage() {
   const contactImage = "/brand/logo-bg.png";
@@ -54,56 +55,7 @@ export default async function ContactPage() {
           <SectionTitle title="Send a request" subtitle="Custom orders, collaborations, and questions." />
           <div className="grid gap-5 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <form className="soft-panel p-5 sm:p-7">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-sm">
-                    <span className="text-rose-muted">Your name</span>
-                    <input
-                      type="text"
-                      name="name"
-                      required
-                      className="mt-2 w-full rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none focus:border-rose-accent"
-                    />
-                  </label>
-                  <label className="block text-sm">
-                    <span className="text-rose-muted">Email</span>
-                    <input
-                      type="email"
-                      name="email"
-                      required
-                      className="mt-2 w-full rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none focus:border-rose-accent"
-                    />
-                  </label>
-                </div>
-
-                <label className="block mt-4 text-sm">
-                  <span className="text-rose-muted">Occasion</span>
-                  <input
-                    type="text"
-                    name="occasion"
-                    className="mt-2 w-full rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none focus:border-rose-accent"
-                  />
-                </label>
-
-                <label className="block mt-4 text-sm">
-                  <span className="text-rose-muted">Message</span>
-                  <textarea
-                    name="message"
-                    required
-                    rows={5}
-                    className="mt-2 w-full resize-none rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none focus:border-rose-accent"
-                  />
-                </label>
-
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <button type="submit" className="btn-primary">
-                    Submit request
-                  </button>
-                  <button type="reset" className="btn-ghost">
-                    Clear
-                  </button>
-                </div>
-              </form>
+              <ContactForm />
             </div>
 
             <aside className="soft-panel p-5 sm:p-7">
