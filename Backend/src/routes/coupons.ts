@@ -21,7 +21,6 @@ router.get("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
     const id = getQueryString(req.params.id) ?? req.params.id;
     const coupon = await prisma.coupon.findUnique({ where: { id } });
-      const id = getQueryString(req.params.id) ?? req.params.id;
     if (!coupon) { res.status(404).json({ error: "Coupon not found" }); return; }
     res.json({ ok: true, data: coupon });
   } catch (err) {
@@ -72,6 +71,7 @@ router.post("/", adminGuard, async (req: Request, res: Response) => {
 // PUT /api/coupons/:id  (admin)
 router.put("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
+    const id = getQueryString(req.params.id) ?? req.params.id;
     const { description, discountType, value, minOrder, maxUses, expiresAt, active } = req.body as {
       description?: string;
       discountType?: "PERCENT" | "FIXED";
