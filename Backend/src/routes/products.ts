@@ -15,7 +15,6 @@ router.get("/", async (req: Request, res: Response) => {
     const page = parseInt(getQueryString(req.query.page) ?? "1", 10);
     const limit = parseInt(getQueryString(req.query.limit) ?? "20", 10);
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const skip = (page - 1) * limit;
     const take = limit;
 
@@ -152,6 +151,7 @@ router.post("/", adminGuard, async (req: Request, res: Response) => {
 // PUT /api/products/:id  (admin)
 router.put("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
+    const id = getQueryString(req.params.id) ?? req.params.id;
     const {
       name, slug, description, price, comparePrice,
       images, inStock, featured, categoryId,
@@ -230,7 +230,6 @@ router.post("/:id/variants", adminGuard, async (req: Request, res: Response) => 
 // DELETE /api/products/:id/variants/:variantId  (admin)
 router.delete("/:id/variants/:variantId", adminGuard, async (req: Request, res: Response) => {
   try {
-    const id = getQueryString(req.params.id) ?? req.params.id;
     const variantId = getQueryString(req.params.variantId) ?? req.params.variantId;
     await prisma.productVariant.delete({ where: { id: variantId } });
     res.json({ ok: true });

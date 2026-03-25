@@ -13,11 +13,9 @@ router.get("/", adminGuard, async (req: Request, res: Response) => {
     const page = parseInt(getQueryString(req.query.page) ?? "1", 10);
     const limit = parseInt(getQueryString(req.query.limit) ?? "20", 10);
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
     const skip = (page - 1) * limit;
     const take = limit;
 
-    type OrderWhere = { status?: string };
     type OrderWhereTyped = { status?: OrderStatus };
     const where: OrderWhereTyped = {};
     if (status && Object.values(OrderStatus).includes(status as OrderStatus)) {

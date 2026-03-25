@@ -1,17 +1,21 @@
+type QueryValue = string | string[] | Record<string, unknown> | Array<string | Record<string, unknown>> | undefined;
+
 /**
- * Safely extract a single string from a query parameter that could be string | string[]
+ * Safely extract a single string from query/param values that may include ParsedQs objects.
  */
-export function getQueryString(value: string | string[] | undefined): string | undefined {
+export function getQueryString(value: QueryValue): string | undefined {
+  if (typeof value === "string") return value;
   if (Array.isArray(value)) {
-    return value[0];
+    const first = value[0];
+    return typeof first === "string" ? first : undefined;
   }
-  return value;
+  return undefined;
 }
 
 /**
  * Safely extract a boolean-like query parameter
  */
-export function getQueryBoolean(value: string | string[] | undefined): boolean | undefined {
+export function getQueryBoolean(value: QueryValue): boolean | undefined {
   const stringValue = getQueryString(value);
   if (stringValue === "true") return true;
   if (stringValue === "false") return false;
@@ -21,7 +25,7 @@ export function getQueryBoolean(value: string | string[] | undefined): boolean |
 /**
  * Safely extract a query parameter as a number
  */
-export function getQueryNumber(value: string | string[] | undefined): number | undefined {
+export function getQueryNumber(value: QueryValue): number | undefined {
   const stringValue = getQueryString(value);
   if (!stringValue) return undefined;
   const num = parseInt(stringValue, 10);
