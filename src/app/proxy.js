@@ -1,4 +1,4 @@
-let USE_LOCAL_PATH=true;
+let USE_LOCAL_PATH=false;
 
 const LOCAL_PROXY = "http://localhost:4000";
 const REMOTE_PROXY = "https://boxed-bliss.onrender.com";
