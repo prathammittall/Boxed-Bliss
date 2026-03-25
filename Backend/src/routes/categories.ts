@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { adminGuard } from "../middleware/adminGuard";
+import { getQueryString } from "../lib/queryHelper";
 
 const router = Router();
 
@@ -41,8 +42,9 @@ router.get("/flat", async (_req: Request, res: Response) => {
 // GET /api/categories/:id
 router.get("/:id", async (req: Request, res: Response) => {
   try {
+    const id = getQueryString(req.params.id) ?? req.params.id;
     const category = await prisma.category.findUnique({
-      where: { id: req.params.id },
+      where: { id },
       include: { children: true, products: { take: 12 } },
     });
     if (!category) {
@@ -93,6 +95,7 @@ router.post("/", adminGuard, async (req: Request, res: Response) => {
 
 // PUT /api/categories/:id  (admin)
 router.put("/:id", adminGuard, async (req: Request, res: Response) => {
+    const id = getQueryString(req.params.id) ?? req.params.id;
   try {
     const { name, slug, description, parentId } = req.body as {
       name?: string;
@@ -102,7 +105,7 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
     };
 
     const category = await prisma.category.update({
-      where: { id: req.params.id },
+      where: { id },
       data: {
         ...(name && { name }),
         ...(slug && { slug: slug.toLowerCase().replace(/\s+/g, "-") }),
@@ -123,14 +126,15 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
 
 // DELETE /api/categories/:id  (admin)
 router.delete("/:id", adminGuard, async (req: Request, res: Response) => {
+    const id = getQueryString(req.params.id) ?? req.params.id;
   try {
     // Move children to top-level before deletion
     await prisma.category.updateMany({
-      where: { parentId: req.params.id },
+      where: { parentId: id },
       data: { parentId: null },
     });
 
-    await prisma.category.delete({ where: { id: req.params.id } });
+    await prisma.category.delete({ where: { id } });
     res.json({ ok: true });
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "P2025") {

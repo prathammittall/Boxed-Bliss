@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { adminGuard } from "../middleware/adminGuard";
+import { getQueryString } from "../lib/queryHelper";
 
 const router = Router();
 
@@ -18,7 +19,9 @@ router.get("/", adminGuard, async (_req: Request, res: Response) => {
 // GET /api/coupons/:id  (admin)
 router.get("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    const coupon = await prisma.coupon.findUnique({ where: { id: req.params.id } });
+    const id = getQueryString(req.params.id) ?? req.params.id;
+    const coupon = await prisma.coupon.findUnique({ where: { id } });
+      const id = getQueryString(req.params.id) ?? req.params.id;
     if (!coupon) { res.status(404).json({ error: "Coupon not found" }); return; }
     res.json({ ok: true, data: coupon });
   } catch (err) {
@@ -80,7 +83,7 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
     };
 
     const coupon = await prisma.coupon.update({
-      where: { id: req.params.id },
+      where: { id },
       data: {
         ...(description !== undefined && { description }),
         ...(discountType && { discountType }),
@@ -104,7 +107,8 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
 // DELETE /api/coupons/:id  (admin)
 router.delete("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    await prisma.coupon.delete({ where: { id: req.params.id } });
+    const id = getQueryString(req.params.id) ?? req.params.id;
+    await prisma.coupon.delete({ where: { id } });
     res.json({ ok: true });
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "P2025") {

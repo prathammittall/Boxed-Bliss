@@ -1,15 +1,18 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { adminGuard } from "../middleware/adminGuard";
+import { getQueryString } from "../lib/queryHelper";
 
 const router = Router();
 
 // GET /api/contacts  (admin)
 router.get("/", adminGuard, async (req: Request, res: Response) => {
   try {
-    const { read, page = "1", limit = "20" } = req.query as Record<string, string>;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const take = parseInt(limit);
+    const read = getQueryString(req.query.read);
+    const page = parseInt(getQueryString(req.query.page) ?? "1", 10);
+    const limit = parseInt(getQueryString(req.query.limit) ?? "20", 10);
+    const skip = (page - 1) * limit;
+    const take = limit;
 
     type ContactWhere = { read?: boolean };
     const where: ContactWhere = {};
@@ -27,7 +30,7 @@ router.get("/", adminGuard, async (req: Request, res: Response) => {
 
     res.json({
       ok: true, data: contacts,
-      meta: { total, page: parseInt(page), limit: take, pages: Math.ceil(total / take) },
+      meta: { total, page, limit: take, pages: Math.ceil(total / take) },
     });
   } catch (err) {
     console.error(err);
@@ -38,12 +41,13 @@ router.get("/", adminGuard, async (req: Request, res: Response) => {
 // GET /api/contacts/:id  (admin)
 router.get("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    const contact = await prisma.contactSubmission.findUnique({ where: { id: req.params.id } });
+    const id = getQueryString(req.params.id) ?? req.params.id;
+    const contact = await prisma.contactSubmission.findUnique({ where: { id } });
     if (!contact) { res.status(404).json({ error: "Submission not found" }); return; }
 
     // Auto-mark as read on view
     if (!contact.read) {
-      await prisma.contactSubmission.update({ where: { id: req.params.id }, data: { read: true } });
+      await prisma.contactSubmission.update({ where: { id }, data: { read: true } });
     }
 
     res.json({ ok: true, data: { ...contact, read: true } });

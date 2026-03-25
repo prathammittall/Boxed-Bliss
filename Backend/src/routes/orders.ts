@@ -1,20 +1,28 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { adminGuard } from "../middleware/adminGuard";
+import { getQueryString } from "../lib/queryHelper";
+import { OrderStatus } from "../../generated/prisma";
 
 const router = Router();
 
 // GET /api/orders  (admin)
 router.get("/", adminGuard, async (req: Request, res: Response) => {
   try {
-    const { status, page = "1", limit = "20" } = req.query as Record<string, string>;
+    const status = getQueryString(req.query.status);
+    const page = parseInt(getQueryString(req.query.page) ?? "1", 10);
+    const limit = parseInt(getQueryString(req.query.limit) ?? "20", 10);
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const take = parseInt(limit);
+    const skip = (page - 1) * limit;
+    const take = limit;
 
     type OrderWhere = { status?: string };
-    const where: OrderWhere = {};
-    if (status) where.status = status;
+    type OrderWhereTyped = { status?: OrderStatus };
+    const where: OrderWhereTyped = {};
+    if (status && Object.values(OrderStatus).includes(status as OrderStatus)) {
+      where.status = status as OrderStatus;
+    }
 
     const [total, orders] = await Promise.all([
       prisma.order.count({ where }),
@@ -28,7 +36,7 @@ router.get("/", adminGuard, async (req: Request, res: Response) => {
 
     res.json({
       ok: true, data: orders,
-      meta: { total, page: parseInt(page), limit: take, pages: Math.ceil(total / take) },
+      meta: { total, page, limit: take, pages: Math.ceil(total / take) },
     });
   } catch (err) {
     console.error(err);
@@ -39,8 +47,9 @@ router.get("/", adminGuard, async (req: Request, res: Response) => {
 // GET /api/orders/:id  (admin)
 router.get("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
+    const id = getQueryString(req.params.id) ?? req.params.id;
     const order = await prisma.order.findUnique({
-      where: { id: req.params.id },
+      where: { id },
       include: { items: { include: { product: true } } },
     });
     if (!order) { res.status(404).json({ error: "Order not found" }); return; }
@@ -145,13 +154,12 @@ router.post("/", async (req: Request, res: Response) => {
 // PUT /api/orders/:id  — update status (admin)
 router.put("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
+    const id = getQueryString(req.params.id) ?? req.params.id;
     const { status, notes } = req.body as { status?: string; notes?: string };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const order = await prisma.order.update({
-      where: { id: req.params.id },
+      where: { id },
       data: {
-        // status is constrained by DB enum; cast after generation
-        ...(status && { status: status as any }),
+        ...(status && Object.values(OrderStatus).includes(status as OrderStatus) && { status: status as OrderStatus }),
         ...(notes !== undefined && { notes }),
       },
     });
@@ -168,7 +176,8 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
 // DELETE /api/orders/:id  (admin)
 router.delete("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    await prisma.order.delete({ where: { id: req.params.id } });
+    const id = getQueryString(req.params.id) ?? req.params.id;
+    await prisma.order.delete({ where: { id } });
     res.json({ ok: true });
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "P2025") {

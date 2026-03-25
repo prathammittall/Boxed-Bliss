@@ -1,23 +1,23 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { adminGuard } from "../middleware/adminGuard";
+import { getQueryString } from "../lib/queryHelper";
 
 const router = Router();
 
 // GET /api/products  — public listing with filters
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const {
-      category,
-      featured,
-      inStock,
-      search,
-      page = "1",
-      limit = "20",
-    } = req.query as Record<string, string>;
+    const category = getQueryString(req.query.category);
+    const featured = getQueryString(req.query.featured);
+    const inStock = getQueryString(req.query.inStock);
+    const search = getQueryString(req.query.search);
+    const page = parseInt(getQueryString(req.query.page) ?? "1", 10);
+    const limit = parseInt(getQueryString(req.query.limit) ?? "20", 10);
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const take = parseInt(limit);
+    const skip = (page - 1) * limit;
+    const take = limit;
 
     type WhereClause = {
       categoryId?: string;
@@ -54,7 +54,7 @@ router.get("/", async (req: Request, res: Response) => {
     res.json({
       ok: true,
       data: products,
-      meta: { total, page: parseInt(page), limit: take, pages: Math.ceil(total / take) },
+      meta: { total, page, limit: take, pages: Math.ceil(total / take) },
     });
   } catch (err) {
     console.error(err);
@@ -65,9 +65,10 @@ router.get("/", async (req: Request, res: Response) => {
 // GET /api/products/:id  — public
 router.get("/:id", async (req: Request, res: Response) => {
   try {
+    const id = getQueryString(req.params.id) ?? req.params.id;
     const product = await prisma.product.findFirst({
       where: {
-        OR: [{ id: req.params.id }, { slug: req.params.id }],
+        OR: [{ id }, { slug: id }],
       },
       include: {
         category: true,
@@ -167,7 +168,7 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
     };
 
     const product = await prisma.product.update({
-      where: { id: req.params.id },
+      where: { id },
       data: {
         ...(name && { name }),
         ...(slug && { slug: slug.toLowerCase().replace(/\s+/g, "-") }),
@@ -196,7 +197,8 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
 // DELETE /api/products/:id  (admin)
 router.delete("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    await prisma.product.delete({ where: { id: req.params.id } });
+    const id = getQueryString(req.params.id) ?? req.params.id;
+    await prisma.product.delete({ where: { id } });
     res.json({ ok: true });
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "P2025") {
@@ -214,8 +216,9 @@ router.delete("/:id", adminGuard, async (req: Request, res: Response) => {
 router.post("/:id/variants", adminGuard, async (req: Request, res: Response) => {
   try {
     const { label, value, price } = req.body as { label: string; value: string; price?: number };
+    const id = getQueryString(req.params.id) ?? req.params.id;
     const variant = await prisma.productVariant.create({
-      data: { productId: req.params.id, label, value, price: price ?? null },
+      data: { productId: id, label, value, price: price ?? null },
     });
     res.status(201).json({ ok: true, data: variant });
   } catch (err) {
@@ -227,7 +230,9 @@ router.post("/:id/variants", adminGuard, async (req: Request, res: Response) => 
 // DELETE /api/products/:id/variants/:variantId  (admin)
 router.delete("/:id/variants/:variantId", adminGuard, async (req: Request, res: Response) => {
   try {
-    await prisma.productVariant.delete({ where: { id: req.params.variantId } });
+    const id = getQueryString(req.params.id) ?? req.params.id;
+    const variantId = getQueryString(req.params.variantId) ?? req.params.variantId;
+    await prisma.productVariant.delete({ where: { id: variantId } });
     res.json({ ok: true });
   } catch(err) {
     console.error(err);
