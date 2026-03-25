@@ -237,6 +237,17 @@ export const api = {
       method: "POST",
       body: formData,
     }),
+  uploadImageFile: async (file: File, folder?: string) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    if (folder) formData.append("folder", folder);
+
+    const result = await request<{ ok: true; url: string; publicId: string }>("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    return result.url;
+  },
 
   // Categories
   getCategories: async () => extractEnvelopeData(await request<ApiEnvelope<Category[]>>("/api/categories")),

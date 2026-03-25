@@ -82,7 +82,7 @@ export default async function CollectionsPage() {
               key={category.id}
               title={category.name}
               subtitle={category.description || "A premium handcrafted curation for meaningful gifting."}
-              imageSrc={category.image || FALLBACK_IMAGE}
+              imageSrc={FALLBACK_IMAGE}
               href={`/shop?category=${encodeURIComponent(category.id)}`}
             />
           ))}

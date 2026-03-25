@@ -104,8 +104,18 @@ router.post("/", adminGuard, async (req: Request, res: Response) => {
       variants?: { label: string; value: string; price?: number }[];
     };
 
-    if (!name || !slug || price === undefined) {
-      res.status(400).json({ error: "name, slug, and price are required" });
+    if (!name || !slug || price === undefined || !categoryId) {
+      res.status(400).json({ error: "name, slug, price, and categoryId are required" });
+      return;
+    }
+
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+      select: { id: true },
+    });
+
+    if (!category) {
+      res.status(400).json({ error: "Invalid categoryId" });
       return;
     }
 
@@ -119,7 +129,7 @@ router.post("/", adminGuard, async (req: Request, res: Response) => {
         images: images ?? [],
         inStock: inStock ?? true,
         featured: featured ?? false,
-        categoryId: categoryId || null,
+        categoryId,
         variants: variants
           ? { create: variants.map((v) => ({ label: v.label, value: v.value, price: v.price ?? null })) }
           : undefined,

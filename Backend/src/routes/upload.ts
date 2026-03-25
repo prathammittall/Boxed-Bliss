@@ -6,6 +6,13 @@ import { adminGuard } from "../middleware/adminGuard";
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // 10 MB
 
+function isCloudinaryNetworkError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: unknown }).code;
+  if (typeof code !== "string") return false;
+  return ["ENOTFOUND", "EAI_AGAIN", "ECONNRESET", "ETIMEDOUT", "ESOCKETTIMEDOUT"].includes(code);
+}
+
 // POST /api/upload  (admin only)
 router.post("/", adminGuard, upload.single("image"), async (req: Request, res: Response) => {
   try {
@@ -20,6 +27,10 @@ router.post("/", adminGuard, upload.single("image"), async (req: Request, res: R
     res.json({ ok: true, url: result.url, publicId: result.publicId });
   } catch (err) {
     console.error("Upload error:", err);
+    if (isCloudinaryNetworkError(err)) {
+      res.status(503).json({ error: "Cloudinary is temporarily unreachable. Please try again." });
+      return;
+    }
     res.status(500).json({ error: "Image upload failed" });
   }
 });
@@ -39,6 +50,10 @@ router.post("/multiple", adminGuard, upload.array("images", 10), async (req: Req
     res.json({ ok: true, images: uploads });
   } catch (err) {
     console.error("Multiple upload error:", err);
+    if (isCloudinaryNetworkError(err)) {
+      res.status(503).json({ error: "Cloudinary is temporarily unreachable. Please try again." });
+      return;
+    }
     res.status(500).json({ error: "Image upload failed" });
   }
 });

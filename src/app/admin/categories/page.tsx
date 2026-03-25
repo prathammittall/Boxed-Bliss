@@ -7,6 +7,7 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   async function loadCategories() {
     setLoading(true);
@@ -32,7 +33,6 @@ export default function AdminCategoriesPage() {
     const name = String(formData.get("name") ?? "").trim();
     const slugInput = String(formData.get("slug") ?? "").trim();
     const description = String(formData.get("description") ?? "").trim();
-    const image = String(formData.get("image") ?? "").trim();
     const slug = (slugInput || name).toLowerCase().replace(/\s+/g, "-");
 
     if (!name || !slug) {
@@ -40,13 +40,16 @@ export default function AdminCategoriesPage() {
       return;
     }
 
+    setSubmitting(true);
     setError("");
     try {
-      await api.createCategory({ name, slug, description: description || undefined, image: image || undefined });
+      await api.createCategory({ name, slug, description: description || undefined });
       form.reset();
       await loadCategories();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to create category.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -83,10 +86,11 @@ export default function AdminCategoriesPage() {
         <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleCreate}>
           <input name="name" placeholder="Category name" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" required />
           <input name="slug" placeholder="Slug (optional)" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
-          <input name="image" placeholder="Image URL (optional)" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
           <textarea name="description" rows={3} placeholder="Description (optional)" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none md:col-span-2" />
           <div className="md:col-span-2">
-            <button type="submit" className="btn-primary">Create category</button>
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? "Creating..." : "Create category"}
+            </button>
           </div>
         </form>
       </article>

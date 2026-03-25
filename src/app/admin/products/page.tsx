@@ -1,10 +1,11 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { ApiError, api, type Product } from "@/lib/api";
+import { ApiError, api, type Category, type Product } from "@/lib/api";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -22,8 +23,18 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function loadCategories() {
+    try {
+      const result = await api.getCategoriesFlat();
+      setCategories(result);
+    } catch {
+      setCategories([]);
+    }
+  }
+
   useEffect(() => {
     loadProducts();
+    loadCategories();
   }, []);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
@@ -34,8 +45,10 @@ export default function AdminProductsPage() {
     const name = String(formData.get("name") ?? "").trim();
     const slugInput = String(formData.get("slug") ?? "").trim();
     const priceValue = Number(formData.get("price") ?? 0);
+    const categoryIdInput = String(formData.get("categoryId") ?? "").trim();
     const description = String(formData.get("description") ?? "").trim();
-    const image = String(formData.get("image") ?? "").trim();
+    const imageFileEntry = formData.get("image");
+    const imageFile = imageFileEntry instanceof File && imageFileEntry.size > 0 ? imageFileEntry : null;
     const slug = (slugInput || name).toLowerCase().replace(/\s+/g, "-");
 
     if (!name || !slug || Number.isNaN(priceValue) || priceValue < 0) {
@@ -46,12 +59,18 @@ export default function AdminProductsPage() {
     setSubmitting(true);
     setError("");
     try {
+      let imageUrl: string | undefined;
+      if (imageFile) {
+        imageUrl = await api.uploadImageFile(imageFile, "boxed-bliss/products");
+      }
+
       await api.createProduct({
         name,
         slug,
         price: priceValue,
         description: description || undefined,
-        images: image ? [image] : [],
+        categoryId: categoryIdInput || undefined,
+        images: imageUrl ? [imageUrl] : [],
       });
       form.reset();
       await loadProducts();
@@ -85,7 +104,15 @@ export default function AdminProductsPage() {
           <input name="name" placeholder="Product name" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" required />
           <input name="slug" placeholder="Slug (optional)" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
           <input name="price" type="number" step="0.01" min="0" placeholder="Price" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" required />
-          <input name="image" placeholder="Image URL (optional)" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
+          <select name="categoryId" defaultValue="" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm text-rose-ink outline-none">
+            <option value="">No category</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <input name="image" type="file" accept="image/*" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-rose-accent/20 file:px-3 file:py-1.5 file:text-xs file:font-medium" />
           <textarea name="description" rows={3} placeholder="Description (optional)" className="md:col-span-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
           <div className="md:col-span-2">
             <button type="submit" className="btn-primary" disabled={submitting}>
@@ -109,7 +136,10 @@ export default function AdminProductsPage() {
                 <div key={product.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-line/80 bg-white/60 p-3">
                   <div>
                     <p className="text-sm font-medium text-rose-ink">{product.name}</p>
-                    <p className="text-xs text-rose-muted">{product.slug} • Rs. {product.price.toFixed(2)}</p>
+                    <p className="text-xs text-rose-muted">
+                      {product.slug} • Rs. {product.price.toFixed(2)}
+                      {product.category?.name ? ` • ${product.category.name}` : ""}
+                    </p>
                   </div>
                   <button type="button" className="btn-ghost" onClick={() => handleDelete(product.id)}>
                     Delete

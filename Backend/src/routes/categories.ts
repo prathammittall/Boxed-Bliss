@@ -59,11 +59,10 @@ router.get("/:id", async (req: Request, res: Response) => {
 // POST /api/categories  (admin)
 router.post("/", adminGuard, async (req: Request, res: Response) => {
   try {
-    const { name, slug, description, image, parentId } = req.body as {
+    const { name, slug, description, parentId } = req.body as {
       name: string;
       slug: string;
       description?: string;
-      image?: string;
       parentId?: string;
     };
 
@@ -77,7 +76,6 @@ router.post("/", adminGuard, async (req: Request, res: Response) => {
         name,
         slug: slug.toLowerCase().replace(/\s+/g, "-"),
         description,
-        image,
         parentId: parentId || null,
       },
     });
@@ -96,11 +94,10 @@ router.post("/", adminGuard, async (req: Request, res: Response) => {
 // PUT /api/categories/:id  (admin)
 router.put("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    const { name, slug, description, image, parentId } = req.body as {
+    const { name, slug, description, parentId } = req.body as {
       name?: string;
       slug?: string;
       description?: string;
-      image?: string;
       parentId?: string | null;
     };
 
@@ -110,7 +107,6 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
         ...(name && { name }),
         ...(slug && { slug: slug.toLowerCase().replace(/\s+/g, "-") }),
         ...(description !== undefined && { description }),
-        ...(image !== undefined && { image }),
         ...(parentId !== undefined && { parentId: parentId || null }),
       },
     });
