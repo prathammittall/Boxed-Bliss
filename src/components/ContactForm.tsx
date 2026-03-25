@@ -1,37 +1,50 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { ApiError, api } from "@/lib/api";
 
 type SubmitState = "idle" | "submitting" | "sent" | "error";
 
 export default function ContactForm() {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const form = event.currentTarget;
     const formData = new FormData(form);
+    const name = String(formData.get("name") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim();
+    const subject = String(formData.get("subject") ?? "").trim();
+    const message = String(formData.get("message") ?? "").trim();
+
+    if (!name || !email || !message) {
+      setSubmitState("error");
+      setErrorMessage("Name, email, and message are required.");
+      return;
+    }
 
     setSubmitState("submitting");
+    setErrorMessage("");
 
     try {
-      const response = await fetch("https://formspree.io/f/xdawqqov", {
-        method: "POST",
-        body: formData,
-        headers: {
-          Accept: "application/json",
-        },
+      await api.createContact({
+        name,
+        email,
+        phone: phone || undefined,
+        subject: subject || undefined,
+        message,
       });
-
-      if (!response.ok) {
-        throw new Error("Form submit failed");
-      }
 
       form.reset();
       setSubmitState("sent");
-    } catch {
+    } catch (error) {
+      const messageFromApi =
+        error instanceof ApiError ? error.message : "Could not send your request. Please try again.";
       setSubmitState("error");
+      setErrorMessage(messageFromApi);
     }
   }
 
@@ -59,10 +72,19 @@ export default function ContactForm() {
       </div>
 
       <label className="block mt-4 text-sm">
-        <span className="text-rose-muted">Occasion</span>
+        <span className="text-rose-muted">Subject</span>
         <input
           type="text"
-          name="occasion"
+          name="subject"
+          className="mt-2 w-full rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none focus:border-rose-accent"
+        />
+      </label>
+
+      <label className="block mt-4 text-sm">
+        <span className="text-rose-muted">Phone (optional)</span>
+        <input
+          type="tel"
+          name="phone"
           className="mt-2 w-full rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none focus:border-rose-accent"
         />
       </label>
@@ -86,7 +108,7 @@ export default function ContactForm() {
         </button>
         {submitState === "sent" && <p className="text-sm text-rose-ink">Sent</p>}
         {submitState === "error" && (
-          <p className="text-sm text-rose-muted">Could not send. Please try again.</p>
+          <p className="text-sm text-rose-muted">{errorMessage || "Could not send. Please try again."}</p>
         )}
       </div>
     </form>

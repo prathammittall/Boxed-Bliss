@@ -90,7 +90,7 @@ export default function Navbar() {
           </LoadingLink>
 
           <LoadingLink
-            href="/shop"
+            href="/checkout"
             aria-label="Cart"
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-line/85 bg-white/75 text-rose-muted transition hover:border-rose-accent/50 hover:text-rose-ink"
           >

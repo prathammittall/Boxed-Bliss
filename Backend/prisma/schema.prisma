@@ -1,0 +1,143 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+
+
+
+// ─── Category ────────────────────────────────────────────────────────────────
+
+model Category {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String     @unique
+  description String?
+  image       String?
+  parentId    String?    @db.ObjectId
+  parent      Category?  @relation("CategoryChildren", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children    Category[] @relation("CategoryChildren")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+// ─── Product ─────────────────────────────────────────────────────────────────
+
+model Product {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  slug         String           @unique
+  description  String?
+  price        Float
+  comparePrice Float?
+  images       String[]
+  inStock      Boolean          @default(true)
+  featured     Boolean          @default(false)
+  categoryId   String?          @db.ObjectId
+  category     Category?        @relation(fields: [categoryId], references: [id])
+  variants     ProductVariant[]
+  orderItems   OrderItem[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model ProductVariant {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String   // e.g. "Size", "Color"
+  value     String   // e.g. "Small", "Red"
+  price     Float?   // override price, null = same as product price
+  createdAt DateTime @default(now())
+}
+
+// ─── Order ───────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  customerName    String
+  customerEmail   String
+  customerPhone   String?
+  shippingAddress String
+  city            String
+  state           String?
+  pincode         String
+  items           OrderItem[]
+  subtotal        Float
+  discount        Float       @default(0)
+  total           Float
+  couponCode      String?
+  status          OrderStatus @default(PENDING)
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId     String   @db.ObjectId
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String   @db.ObjectId
+  product     Product  @relation(fields: [productId], references: [id])
+  productName String   // snapshot at time of order
+  image       String?  // snapshot
+  quantity    Int
+  price       Float    // snapshot price
+  variantInfo String?  // e.g. "Size: Small, Color: Red"
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+// ─── Coupon ──────────────────────────────────────────────────────────────────
+
+model Coupon {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  code         String       @unique
+  description  String?
+  discountType DiscountType
+  value        Float        // percent (0-100) or fixed amount
+  minOrder     Float?       // minimum order total to apply
+  maxUses      Int?
+  usedCount    Int          @default(0)
+  active       Boolean      @default(true)
+  expiresAt    DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+// ─── Contact Submission ──────────────────────────────────────────────────────
+
+model ContactSubmission {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
