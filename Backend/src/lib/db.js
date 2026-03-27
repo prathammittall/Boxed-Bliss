@@ -1,5 +1,10 @@
 require("dotenv/config");
+const dns = require("dns");
 const { MongoClient, ObjectId } = require("mongodb");
+
+// Force Node.js to use Google/Cloudflare DNS instead of the system default,
+// which may fail to resolve MongoDB Atlas SRV records on some networks.
+dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
 
 /** @type {import("mongodb").Db | null} */
 let db = null;
