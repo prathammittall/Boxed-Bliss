@@ -41,7 +41,7 @@ router.post("/login", async (req, res) => {
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
@@ -55,7 +55,11 @@ router.post("/login", async (req, res) => {
 
 // POST /api/admin/logout
 router.post("/logout", (_req, res) => {
-  res.clearCookie(COOKIE_NAME, { path: "/" });
+  res.clearCookie(COOKIE_NAME, {
+    path: "/",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  });
   res.json({ ok: true });
 });
 

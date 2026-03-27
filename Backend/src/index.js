@@ -18,9 +18,20 @@ const app = express();
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
+const allowedOrigins = (process.env.FRONTEND_URL ?? "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim());
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. curl, Render health checks)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin '${origin}' not allowed`));
+      }
+    },
     credentials: true,
   })
 );
