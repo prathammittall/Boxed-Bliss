@@ -14,7 +14,7 @@ import contactRoutes from "./routes/contacts";
 import analyticsRoutes from "./routes/analytics";
 
 const app = express();
-const PORT = process.env.PORT ?? 4000;
+
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
@@ -54,8 +54,10 @@ app.use((_req, res) => {
 
 // ── Start server ──────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`\n🌸 Boxed Bliss API running on http://localhost:${PORT}\n`);
+const PORT = parseInt(process.env.PORT ?? "4000", 10);
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`\n🌸 Boxed Bliss API running on port ${PORT}\n`);
   console.log("Available endpoints:");
   console.log("  GET    /api/health");
   console.log("  POST   /api/admin/login");
@@ -89,4 +91,12 @@ app.listen(PORT, () => {
   console.log("  GET    /api/analytics            [admin]");
 });
 
+// Graceful shutdown — disconnect Prisma on container stop
+process.on("SIGTERM", async () => {
+  const { prisma } = await import("./lib/prisma");
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
 export default app;
+
