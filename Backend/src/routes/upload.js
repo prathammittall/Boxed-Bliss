@@ -1,0 +1,59 @@
+const { Router } = require("express");
+const multer = require("multer");
+const { uploadToCloudinary } = require("../lib/cloudinary");
+const { adminGuard } = require("../middleware/adminGuard");
+
+const router = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+function isCloudinaryNetworkError(error) {
+  if (!error || typeof error !== "object") return false;
+  const code = error.code;
+  if (typeof code !== "string") return false;
+  return ["ENOTFOUND", "EAI_AGAIN", "ECONNRESET", "ETIMEDOUT", "ESOCKETTIMEDOUT"].includes(code);
+}
+
+// POST /api/upload (admin only)
+router.post("/", adminGuard, upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: "No image file provided" });
+      return;
+    }
+
+    const folder = req.body.folder ?? "boxed-bliss/products";
+    const result = await uploadToCloudinary(req.file.buffer, folder);
+    res.json({ ok: true, url: result.url, publicId: result.publicId });
+  } catch (err) {
+    console.error("Upload error:", err);
+    if (isCloudinaryNetworkError(err)) {
+      res.status(503).json({ error: "Cloudinary is temporarily unreachable. Please try again." });
+      return;
+    }
+    res.status(500).json({ error: "Image upload failed" });
+  }
+});
+
+// POST /api/upload/multiple (admin only, up to 10 images)
+router.post("/multiple", adminGuard, upload.array("images", 10), async (req, res) => {
+  try {
+    const files = req.files;
+    if (!files || files.length === 0) {
+      res.status(400).json({ error: "No image files provided" });
+      return;
+    }
+
+    const folder = req.body.folder ?? "boxed-bliss/products";
+    const uploads = await Promise.all(files.map((f) => uploadToCloudinary(f.buffer, folder)));
+    res.json({ ok: true, images: uploads });
+  } catch (err) {
+    console.error("Multiple upload error:", err);
+    if (isCloudinaryNetworkError(err)) {
+      res.status(503).json({ error: "Cloudinary is temporarily unreachable. Please try again." });
+      return;
+    }
+    res.status(500).json({ error: "Image upload failed" });
+  }
+});
+
+module.exports = router;
