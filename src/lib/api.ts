@@ -1,5 +1,21 @@
 import { proxy } from "@/app/proxy";
 
+// ── Token storage (cross-origin auth) ────────────────────────────────────────
+const TOKEN_KEY = "bb_admin_token";
+
+function saveToken(token: string) {
+  if (typeof window !== "undefined") localStorage.setItem(TOKEN_KEY, token);
+}
+
+function clearToken() {
+  if (typeof window !== "undefined") localStorage.removeItem(TOKEN_KEY);
+}
+
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
 type PrimitiveQueryValue = string | number | boolean;
 
 type QueryParams = Record<string, PrimitiveQueryValue | null | undefined>;
@@ -189,6 +205,12 @@ async function request<T>(
     headers.set("Content-Type", "application/json");
   }
 
+  // Attach stored token as Authorization header for cross-origin requests
+  const storedToken = getToken();
+  if (storedToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${storedToken}`);
+  }
+
   const response = await fetch(url, {
     ...init,
     headers,
@@ -215,15 +237,20 @@ export const api = {
   health: () => request<{ ok: true; service: string; timestamp: string }>("/api/health"),
 
   // Admin
-  adminLogin: (email: string, password: string) =>
-    request<{ ok: true; email: string }>("/api/admin/login", {
+  adminLogin: async (email: string, password: string) => {
+    const res = await request<{ ok: true; email: string; token: string }>("/api/admin/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
-    }),
-  adminLogout: () =>
-    request<{ ok: true }>("/api/admin/logout", {
-      method: "POST",
-    }),
+    });
+    // Store token in localStorage so all subsequent requests use Bearer auth
+    if (res.token) saveToken(res.token);
+    return res;
+  },
+  adminLogout: async () => {
+    const res = await request<{ ok: true }>("/api/admin/logout", { method: "POST" });
+    clearToken();
+    return res;
+  },
   adminMe: () => request<{ ok: true; email: string; role: string }>("/api/admin/me"),
 
   // Upload

@@ -38,15 +38,17 @@ router.post("/login", async (req, res) => {
 
     const token = await signAdminToken({ email, role: "admin" });
 
+    // Also set cookie for same-origin fallback
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
 
-    res.json({ ok: true, email });
+    // Return token in body so the frontend can store it for cross-origin use
+    res.json({ ok: true, email, token });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -57,8 +59,8 @@ router.post("/login", async (req, res) => {
 router.post("/logout", (_req, res) => {
   res.clearCookie(COOKIE_NAME, {
     path: "/",
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: true,
+    sameSite: "none",
   });
   res.json({ ok: true });
 });
