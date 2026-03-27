@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { adminGuard } from "../middleware/adminGuard";
-import { getQueryString } from "../lib/queryHelper";
+import { getQueryString, getParamString } from "../lib/queryHelper";
 import { OrderStatus } from "../../generated/prisma";
 
 const router = Router();
@@ -45,7 +45,7 @@ router.get("/", adminGuard, async (req: Request, res: Response) => {
 // GET /api/orders/:id  (admin)
 router.get("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
     const order = await prisma.order.findUnique({
       where: { id },
       include: { items: { include: { product: true } } },
@@ -152,7 +152,7 @@ router.post("/", async (req: Request, res: Response) => {
 // PUT /api/orders/:id  — update status (admin)
 router.put("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
     const { status, notes } = req.body as { status?: string; notes?: string };
     const order = await prisma.order.update({
       where: { id },
@@ -174,7 +174,7 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
 // DELETE /api/orders/:id  (admin)
 router.delete("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
     await prisma.order.delete({ where: { id } });
     res.json({ ok: true });
   } catch (err: unknown) {

@@ -13,6 +13,13 @@ export function getQueryString(value: QueryValue): string | undefined {
 }
 
 /**
+ * Safely extract a single string from Express 5 route params (string | string[]).
+ */
+export function getParamString(value: string | string[]): string {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/**
  * Safely extract a boolean-like query parameter
  */
 export function getQueryBoolean(value: QueryValue): boolean | undefined {

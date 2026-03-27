@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { adminGuard } from "../middleware/adminGuard";
-import { getQueryString } from "../lib/queryHelper";
+import { getQueryString, getParamString } from "../lib/queryHelper";
 
 const router = Router();
 
@@ -42,7 +42,7 @@ router.get("/flat", async (_req: Request, res: Response) => {
 // GET /api/categories/:id
 router.get("/:id", async (req: Request, res: Response) => {
   try {
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
     const category = await prisma.category.findUnique({
       where: { id },
       include: { children: true, products: { take: 12 } },
@@ -95,7 +95,7 @@ router.post("/", adminGuard, async (req: Request, res: Response) => {
 
 // PUT /api/categories/:id  (admin)
 router.put("/:id", adminGuard, async (req: Request, res: Response) => {
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
   try {
     const { name, slug, description, parentId } = req.body as {
       name?: string;
@@ -126,7 +126,7 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
 
 // DELETE /api/categories/:id  (admin)
 router.delete("/:id", adminGuard, async (req: Request, res: Response) => {
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
   try {
     // Move children to top-level before deletion
     await prisma.category.updateMany({

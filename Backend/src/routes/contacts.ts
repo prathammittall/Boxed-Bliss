@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { adminGuard } from "../middleware/adminGuard";
-import { getQueryString } from "../lib/queryHelper";
+import { getQueryString, getParamString } from "../lib/queryHelper";
 
 const router = Router();
 
@@ -41,7 +41,7 @@ router.get("/", adminGuard, async (req: Request, res: Response) => {
 // GET /api/contacts/:id  (admin)
 router.get("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
     const contact = await prisma.contactSubmission.findUnique({ where: { id } });
     if (!contact) { res.status(404).json({ error: "Submission not found" }); return; }
 
@@ -89,7 +89,7 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
     const { read } = req.body as { read: boolean };
     const contact = await prisma.contactSubmission.update({
-      where: { id: req.params.id },
+      where: { id: getParamString(req.params.id) },
       data: { read },
     });
     res.json({ ok: true, data: contact });
@@ -105,7 +105,7 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
 // DELETE /api/contacts/:id  (admin)
 router.delete("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    await prisma.contactSubmission.delete({ where: { id: req.params.id } });
+    await prisma.contactSubmission.delete({ where: { id: getParamString(req.params.id) } });
     res.json({ ok: true });
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "P2025") {

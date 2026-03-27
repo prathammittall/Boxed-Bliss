@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { adminGuard } from "../middleware/adminGuard";
-import { getQueryString } from "../lib/queryHelper";
+import { getQueryString, getParamString } from "../lib/queryHelper";
 
 const router = Router();
 
@@ -64,7 +64,7 @@ router.get("/", async (req: Request, res: Response) => {
 // GET /api/products/:id  — public
 router.get("/:id", async (req: Request, res: Response) => {
   try {
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
     const product = await prisma.product.findFirst({
       where: {
         OR: [{ id }, { slug: id }],
@@ -151,7 +151,7 @@ router.post("/", adminGuard, async (req: Request, res: Response) => {
 // PUT /api/products/:id  (admin)
 router.put("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
     const {
       name, slug, description, price, comparePrice,
       images, inStock, featured, categoryId,
@@ -197,7 +197,7 @@ router.put("/:id", adminGuard, async (req: Request, res: Response) => {
 // DELETE /api/products/:id  (admin)
 router.delete("/:id", adminGuard, async (req: Request, res: Response) => {
   try {
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
     await prisma.product.delete({ where: { id } });
     res.json({ ok: true });
   } catch (err: unknown) {
@@ -216,7 +216,7 @@ router.delete("/:id", adminGuard, async (req: Request, res: Response) => {
 router.post("/:id/variants", adminGuard, async (req: Request, res: Response) => {
   try {
     const { label, value, price } = req.body as { label: string; value: string; price?: number };
-    const id = getQueryString(req.params.id) ?? req.params.id;
+    const id = getParamString(req.params.id);
     const variant = await prisma.productVariant.create({
       data: { productId: id, label, value, price: price ?? null },
     });
@@ -230,7 +230,7 @@ router.post("/:id/variants", adminGuard, async (req: Request, res: Response) => 
 // DELETE /api/products/:id/variants/:variantId  (admin)
 router.delete("/:id/variants/:variantId", adminGuard, async (req: Request, res: Response) => {
   try {
-    const variantId = getQueryString(req.params.variantId) ?? req.params.variantId;
+    const variantId = getParamString(req.params.variantId);
     await prisma.productVariant.delete({ where: { id: variantId } });
     res.json({ ok: true });
   } catch(err) {
