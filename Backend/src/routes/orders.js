@@ -1,6 +1,6 @@
-const { Router } = require("express");
-const { getDb, toObjectId } = require("../lib/db");
-const { adminGuard } = require("../middleware/adminGuard");
+import { Router } from "express";
+import { getDb, toObjectId } from "../lib/db.js";
+import { adminGuard } from "../middleware/adminGuard.js";
 
 const VALID_STATUSES = ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "REFUNDED"];
 
@@ -238,4 +238,4 @@ router.delete("/:id", adminGuard, async (req, res) => {
   }
 });
 
-module.exports = router;
+export const orderRoutes = router;

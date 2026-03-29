@@ -1,5 +1,31 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Production Auth Environment Setup
+
+To make admin login work correctly on deployed environments (frontend and backend on different domains), set these environment variables:
+
+### Frontend (Vercel)
+
+- `NEXT_PUBLIC_API_BASE_URL=https://<your-backend-domain>`
+
+Example:
+
+- `NEXT_PUBLIC_API_BASE_URL=https://boxed-bliss.onrender.com`
+
+### Backend (Render/Node host)
+
+- `NODE_ENV=production`
+- `FRONTEND_URL=https://<your-frontend-domain>`
+- `ADMIN_JWT_SECRET=<strong-random-secret>`
+- `ADMIN_EMAIL=<admin-email>`
+- `ADMIN_PASSWORD=<admin-password-or-bcrypt-hash>`
+
+Notes:
+
+- `FRONTEND_URL` can contain multiple comma-separated origins if needed.
+- In production, auth cookie is set with `secure: true` and `sameSite: "none"`.
+- Frontend requests already send credentials (`credentials: "include"`) and include Bearer token when available.
+
 ## Getting Started
 
 First, run the development server:

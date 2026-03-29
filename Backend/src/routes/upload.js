@@ -1,7 +1,7 @@
-const { Router } = require("express");
-const multer = require("multer");
-const { uploadToCloudinary } = require("../lib/cloudinary");
-const { adminGuard } = require("../middleware/adminGuard");
+import { Router } from "express";
+import multer from "multer";
+import { uploadToCloudinary } from "../lib/cloudinary.js";
+import { adminGuard } from "../middleware/adminGuard.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -56,4 +56,4 @@ router.post("/multiple", adminGuard, upload.array("images", 10), async (req, res
   }
 });
 
-module.exports = router;
+export const uploadRoutes = router;

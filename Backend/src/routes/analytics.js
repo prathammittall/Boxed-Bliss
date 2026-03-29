@@ -1,6 +1,6 @@
-const { Router } = require("express");
-const { getDb } = require("../lib/db");
-const { adminGuard } = require("../middleware/adminGuard");
+import { Router } from "express";
+import { getDb } from "../lib/db.js";
+import { adminGuard } from "../middleware/adminGuard.js";
 
 const router = Router();
 
@@ -83,4 +83,4 @@ router.get("/", adminGuard, async (_req, res) => {
   }
 });
 
-module.exports = router;
+export const analyticsRoutes = router;

@@ -1,6 +1,6 @@
-const { Router } = require("express");
-const { getDb, toObjectId } = require("../lib/db");
-const { adminGuard } = require("../middleware/adminGuard");
+import { Router } from "express";
+import { getDb, toObjectId } from "../lib/db.js";
+import { adminGuard } from "../middleware/adminGuard.js";
 
 const router = Router();
 
@@ -150,4 +150,4 @@ router.post("/validate", async (req, res) => {
   }
 });
 
-module.exports = router;
+export const couponRoutes = router;

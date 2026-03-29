@@ -1,9 +1,10 @@
-const { Router } = require("express");
-const bcrypt = require("bcryptjs");
-const { signAdminToken, verifyAdminToken, COOKIE_NAME } = require("../lib/auth");
-const { adminGuard } = require("../middleware/adminGuard");
+import { Router } from "express";
+import bcrypt from "bcryptjs";
+import { signAdminToken, COOKIE_NAME } from "../lib/auth.js";
+import { adminGuard } from "../middleware/adminGuard.js";
 
 const router = Router();
+const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 // POST /api/admin/login
 router.post("/login", async (req, res) => {
@@ -37,13 +38,14 @@ router.post("/login", async (req, res) => {
     }
 
     const token = await signAdminToken({ email, role: "admin" });
+    const isProd = process.env.NODE_ENV === "production";
 
-    // Also set cookie for same-origin fallback
+    // Set auth cookie for session-based auth.
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      maxAge: TOKEN_TTL_MS,
       path: "/",
     });
 
@@ -57,10 +59,12 @@ router.post("/login", async (req, res) => {
 
 // POST /api/admin/logout
 router.post("/logout", (_req, res) => {
+  const isProd = process.env.NODE_ENV === "production";
+
   res.clearCookie(COOKIE_NAME, {
     path: "/",
-    secure: true,
-    sameSite: "none",
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
   });
   res.json({ ok: true });
 });
@@ -70,4 +74,4 @@ router.get("/me", adminGuard, (req, res) => {
   res.json({ ok: true, email: req.admin.email, role: req.admin.role });
 });
 
-module.exports = router;
+export const adminRoutes = router;

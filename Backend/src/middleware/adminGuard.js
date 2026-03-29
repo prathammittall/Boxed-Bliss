@@ -1,18 +1,14 @@
-const { verifyAdminToken, COOKIE_NAME } = require("../lib/auth");
+import { verifyAdminToken, COOKIE_NAME } from "../lib/auth.js";
 
 /**
  * Parses the admin JWT from the Authorization header (Bearer) or cookie.
  * Returns 401 if the token is missing or invalid.
  */
 async function adminGuard(req, res, next) {
-  // Prefer Authorization header (used for cross-origin requests from Vercel)
-  let token = null;
-  const authHeader = req.headers["authorization"] ?? "";
-  if (authHeader.startsWith("Bearer ")) {
-    token = authHeader.slice(7).trim();
-  } else {
-    token = req.cookies?.[COOKIE_NAME] ?? null;
-  }
+  const cookieToken = req.cookies?.[COOKIE_NAME] ?? null;
+  const authHeader = req.headers.authorization ?? "";
+  const headerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+  const token = cookieToken || headerToken;
 
   if (!token) {
     res.status(401).json({ error: "Unauthorized: no token" });
@@ -29,4 +25,4 @@ async function adminGuard(req, res, next) {
   next();
 }
 
-module.exports = { adminGuard };
+export { adminGuard };

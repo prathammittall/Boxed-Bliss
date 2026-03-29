@@ -220,6 +220,10 @@ async function request<T>(
 
   const payload = await parseResponseBody(response);
 
+  if (response.status === 401 && storedToken) {
+    clearToken();
+  }
+
   if (!response.ok) {
     const fallback = `Request failed with status ${response.status}`;
     throw new ApiError(getErrorMessage(payload, fallback), response.status, payload);

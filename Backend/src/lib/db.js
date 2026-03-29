@@ -1,6 +1,6 @@
-require("dotenv/config");
-const dns = require("dns");
-const { MongoClient, ObjectId } = require("mongodb");
+import "dotenv/config";
+import dns from "dns";
+import { MongoClient, ObjectId } from "mongodb";
 
 // Force Node.js to use Google/Cloudflare DNS instead of the system default,
 // which may fail to resolve MongoDB Atlas SRV records on some networks.
@@ -77,4 +77,4 @@ function toObjectId(id) {
   }
 }
 
-module.exports = { connectDb, getDb, disconnectDb, toObjectId, ObjectId };
+export { connectDb, getDb, disconnectDb, toObjectId, ObjectId };

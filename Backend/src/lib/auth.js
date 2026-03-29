@@ -1,5 +1,5 @@
-const { SignJWT, jwtVerify } = require("jose");
-const bcrypt = require("bcryptjs");
+import { SignJWT, jwtVerify } from "jose";
+import bcrypt from "bcryptjs";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET ?? "fallback-secret-change-me-in-production"
@@ -45,4 +45,4 @@ async function verifyAdminToken(token) {
   }
 }
 
-module.exports = { hashPassword, verifyPassword, signAdminToken, verifyAdminToken, COOKIE_NAME };
+export { hashPassword, verifyPassword, signAdminToken, verifyAdminToken, COOKIE_NAME };

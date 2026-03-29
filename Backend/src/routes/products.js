@@ -1,6 +1,6 @@
-const { Router } = require("express");
-const { getDb, toObjectId, ObjectId } = require("../lib/db");
-const { adminGuard } = require("../middleware/adminGuard");
+import { Router } from "express";
+import { getDb, toObjectId, ObjectId } from "../lib/db.js";
+import { adminGuard } from "../middleware/adminGuard.js";
 
 const router = Router();
 
@@ -261,4 +261,4 @@ router.delete("/:id/variants/:variantId", adminGuard, async (req, res) => {
   }
 });
 
-module.exports = router;
+export const productRoutes = router;
