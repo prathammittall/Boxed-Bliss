@@ -106,7 +106,9 @@ export default function ContactForm() {
         <button type="reset" className="btn-ghost" disabled={submitState === "submitting"}>
           Clear
         </button>
-        {submitState === "sent" && <p className="text-sm text-rose-ink">Sent</p>}
+        {submitState === "sent" && (
+          <p className="text-sm text-rose-ink">Sent. Your request has been submitted successfully.</p>
+        )}
         {submitState === "error" && (
           <p className="text-sm text-rose-muted">{errorMessage || "Could not send. Please try again."}</p>
         )}

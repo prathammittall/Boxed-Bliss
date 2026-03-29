@@ -7,6 +7,7 @@ const footerGroups = [
     links: [
       { label: "Join our bliss circle", href: "/join" },
       { label: "Customer service", href: "/customer-service" },
+      { label: "Track order", href: "/order-status" },
     ],
   },
   {

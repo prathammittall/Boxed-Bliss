@@ -4,6 +4,39 @@ import { adminGuard } from "../middleware/adminGuard.js";
 
 const router = Router();
 
+async function notifyFormspreeAboutContact(submission) {
+  const endpoint = (process.env.FORMSPREE_CONTACT_ENDPOINT ?? "").trim();
+  if (!endpoint) return;
+
+  const payload = {
+    _subject: `New Contact Submission from ${submission.name}`,
+    name: submission.name,
+    email: submission.email,
+    phone: submission.phone ?? "",
+    subject: submission.subject ?? "",
+    message: submission.message,
+    submittedAt: submission.createdAt,
+  };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      console.error("Formspree contact notification failed:", response.status, body);
+    }
+  } catch (error) {
+    console.error("Formspree contact notification error:", error);
+  }
+}
+
 // GET /api/contacts (admin)
 router.get("/", adminGuard, async (req, res) => {
   try {
@@ -79,6 +112,10 @@ router.post("/", async (req, res) => {
     };
 
     const result = await db.collection("ContactSubmission").insertOne(doc);
+
+    // Notify Formspree with contact details (non-blocking for user success).
+    void notifyFormspreeAboutContact(doc);
+
     res.status(201).json({ ok: true, data: { ...doc, id: result.insertedId.toString(), _id: result.insertedId } });
   } catch (err) {
     console.error(err);

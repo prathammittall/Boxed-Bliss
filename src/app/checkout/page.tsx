@@ -17,6 +17,100 @@ import {
 } from "@/lib/cart";
 
 const FALLBACK_IMAGE = "/brand/logo-bg.png";
+const ORDER_FORMSPREE_ENDPOINT = (process.env.NEXT_PUBLIC_FORMSPREE_ORDER_ENDPOINT ?? "").trim();
+
+function formatOrderItemsForEmail(items: Array<{ productName: string; quantity: number; price: number; variantInfo?: string | null }>) {
+  return items
+    .map((item, index) => {
+      const lineTotal = Number(item.price) * Number(item.quantity);
+      return [
+        `${index + 1}. ${item.productName}`,
+        `   Quantity: ${item.quantity}`,
+        `   Unit Price: ${item.price}`,
+        `   Line Total: ${lineTotal.toFixed(2)}`,
+        `   Variant: ${item.variantInfo ?? "N/A"}`,
+      ].join("\n");
+    })
+    .join("\n\n");
+}
+
+async function notifyOrderOnFormspree(order: {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string | null;
+  shippingAddress: string;
+  city: string;
+  state?: string | null;
+  pincode: string;
+  subtotal: number;
+  discount: number;
+  total: number;
+  couponCode?: string | null;
+  status: string;
+  notes?: string | null;
+  items: Array<{ productName: string; quantity: number; price: number; variantInfo?: string | null; image?: string | null }>;
+}) {
+  if (!ORDER_FORMSPREE_ENDPOINT) return;
+
+  const message = [
+    `Order ID: ${order.id}`,
+    `Customer Name: ${order.customerName}`,
+    `Customer Email: ${order.customerEmail}`,
+    `Customer Phone: ${order.customerPhone ?? "N/A"}`,
+    `Address: ${order.shippingAddress}, ${order.city}${order.state ? `, ${order.state}` : ""} - ${order.pincode}`,
+    `Subtotal: ${order.subtotal}`,
+    `Discount: ${order.discount}`,
+    `Total: ${order.total}`,
+    `Coupon: ${order.couponCode ?? "N/A"}`,
+    `Status: ${order.status}`,
+    `Notes: ${order.notes ?? "N/A"}`,
+    "",
+    "Items:",
+    formatOrderItemsForEmail(order.items),
+  ].join("\n");
+
+  const payload = {
+    _subject: `New Boxed Bliss Order #${order.id}`,
+    orderId: order.id,
+    customerName: order.customerName,
+    customerEmail: order.customerEmail,
+    customerPhone: order.customerPhone ?? "",
+    shippingAddress: order.shippingAddress,
+    city: order.city,
+    state: order.state ?? "",
+    pincode: order.pincode,
+    subtotal: order.subtotal,
+    discount: order.discount,
+    total: order.total,
+    couponCode: order.couponCode ?? "",
+    orderStatus: order.status,
+    notes: order.notes ?? "",
+    items: order.items.map((item) => ({
+      productName: item.productName,
+      quantity: item.quantity,
+      price: item.price,
+      lineTotal: Number(item.price) * Number(item.quantity),
+      variantInfo: item.variantInfo ?? null,
+      image: item.image ?? null,
+    })),
+    message,
+  };
+
+  const response = await fetch(ORDER_FORMSPREE_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Formspree order notification failed (${response.status}): ${body}`);
+  }
+}
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -31,6 +125,7 @@ function CheckoutContent() {
   const [submitState, setSubmitState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState("");
   const [orderId, setOrderId] = useState("");
+  const [orderTrackingEmail, setOrderTrackingEmail] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -178,6 +273,15 @@ function CheckoutContent() {
       });
 
       setOrderId(order.id);
+      setOrderTrackingEmail(customerEmail);
+
+      try {
+        await notifyOrderOnFormspree(order);
+      } catch (notifyError) {
+        // Checkout success should not be blocked by notification delivery failures.
+        console.error("Frontend Formspree order notification failed:", notifyError);
+      }
+
       setSubmitState("success");
       form.reset();
       setCouponCode("");
@@ -317,7 +421,15 @@ function CheckoutContent() {
                   {submitState === "submitting" ? "Placing order..." : "Place order"}
                 </button>
                 {submitState === "success" ? (
-                  <p className="text-sm text-rose-ink">Order placed successfully. ID: {orderId}</p>
+                  <div className="text-sm text-rose-ink">
+                    <p>Order placed successfully. ID: {orderId}. We have received your request details.</p>
+                    <LoadingLink
+                      href={`/order-status?orderId=${encodeURIComponent(orderId)}&email=${encodeURIComponent(orderTrackingEmail)}`}
+                      className="mt-2 inline-flex text-rose-muted underline hover:text-rose-ink"
+                    >
+                      Track this order
+                    </LoadingLink>
+                  </div>
                 ) : null}
                 {submitState === "error" ? (
                   <p className="text-sm text-rose-muted">{error || "Order placement failed."}</p>

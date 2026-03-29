@@ -6,6 +6,90 @@ const VALID_STATUSES = ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVE
 
 const router = Router();
 
+function formatItemsForEmail(items) {
+  return items
+    .map((item, index) => {
+      const lineTotal = Number(item.price) * Number(item.quantity);
+      return [
+        `${index + 1}. ${item.productName}`,
+        `   Product ID: ${item.productId}`,
+        `   Quantity: ${item.quantity}`,
+        `   Unit Price: ${item.price}`,
+        `   Line Total: ${lineTotal.toFixed(2)}`,
+        `   Variant: ${item.variantInfo ?? "N/A"}`,
+      ].join("\n");
+    })
+    .join("\n\n");
+}
+
+async function notifyFormspreeAboutOrder({ orderId, orderDoc, itemDocs }) {
+  const endpoint = (process.env.FORMSPREE_ORDER_ENDPOINT ?? "").trim();
+  if (!endpoint) return;
+
+  const message = [
+    `Order ID: ${orderId}`,
+    `Customer Name: ${orderDoc.customerName}`,
+    `Customer Email: ${orderDoc.customerEmail}`,
+    `Customer Phone: ${orderDoc.customerPhone ?? "N/A"}`,
+    `Address: ${orderDoc.shippingAddress}, ${orderDoc.city}${orderDoc.state ? `, ${orderDoc.state}` : ""} - ${orderDoc.pincode}`,
+    `Subtotal: ${orderDoc.subtotal}`,
+    `Discount: ${orderDoc.discount}`,
+    `Total: ${orderDoc.total}`,
+    `Coupon: ${orderDoc.couponCode ?? "N/A"}`,
+    `Status: ${orderDoc.status}`,
+    `Notes: ${orderDoc.notes ?? "N/A"}`,
+    "",
+    "Items:",
+    formatItemsForEmail(itemDocs),
+  ].join("\n");
+
+  const payload = {
+    _subject: `New Boxed Bliss Order #${orderId}`,
+    orderId,
+    customerName: orderDoc.customerName,
+    customerEmail: orderDoc.customerEmail,
+    customerPhone: orderDoc.customerPhone ?? "",
+    shippingAddress: orderDoc.shippingAddress,
+    city: orderDoc.city,
+    state: orderDoc.state ?? "",
+    pincode: orderDoc.pincode,
+    subtotal: orderDoc.subtotal,
+    discount: orderDoc.discount,
+    total: orderDoc.total,
+    couponCode: orderDoc.couponCode ?? "",
+    orderStatus: orderDoc.status,
+    notes: orderDoc.notes ?? "",
+    items: itemDocs.map((item) => ({
+      productId: item.productId?.toString?.() ?? String(item.productId),
+      productName: item.productName,
+      quantity: item.quantity,
+      price: item.price,
+      lineTotal: Number(item.price) * Number(item.quantity),
+      variantInfo: item.variantInfo ?? null,
+      image: item.image ?? null,
+    })),
+    message,
+  };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      console.error("Formspree order notification failed:", response.status, body);
+    }
+  } catch (error) {
+    console.error("Formspree order notification error:", error);
+  }
+}
+
 // GET /api/orders (admin)
 router.get("/", adminGuard, async (req, res) => {
   try {
@@ -62,6 +146,57 @@ router.get("/", adminGuard, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
+
+// GET /api/orders/track (public)
+router.get("/track", async (req, res) => {
+  try {
+    const db = getDb();
+    const orderId = typeof req.query.orderId === "string" ? req.query.orderId.trim() : "";
+    const email = typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
+
+    if (!orderId || !email) {
+      res.status(400).json({ error: "orderId and email are required" });
+      return;
+    }
+
+    const oid = toObjectId(orderId);
+    if (!oid) {
+      res.status(400).json({ error: "Invalid orderId" });
+      return;
+    }
+
+    const order = await db.collection("Order").findOne({ _id: oid });
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    const orderEmail = String(order.customerEmail ?? "").trim().toLowerCase();
+    if (orderEmail !== email) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    const items = await db.collection("OrderItem").find({ orderId: oid }).toArray();
+
+    res.json({
+      ok: true,
+      data: {
+        ...order,
+        id: order._id.toString(),
+        items: items.map((item) => ({
+          ...item,
+          id: item._id.toString(),
+          orderId: item.orderId.toString(),
+          productId: item.productId?.toString?.() ?? String(item.productId),
+        })),
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to track order" });
   }
 });
 
@@ -178,6 +313,13 @@ router.post("/", async (req, res) => {
     // Insert order items
     const itemDocs = orderItems.map((item) => ({ ...item, orderId }));
     if (itemDocs.length) await db.collection("OrderItem").insertMany(itemDocs);
+
+    // Notify Formspree with full order details (non-blocking for checkout success).
+    void notifyFormspreeAboutOrder({
+      orderId: orderId.toString(),
+      orderDoc,
+      itemDocs,
+    });
 
     res.status(201).json({
       ok: true,

@@ -7,6 +7,7 @@ To make admin login work correctly on deployed environments (frontend and backen
 ### Frontend (Vercel)
 
 - `NEXT_PUBLIC_API_BASE_URL=https://<your-backend-domain>`
+- `NEXT_PUBLIC_FORMSPREE_ORDER_ENDPOINT=https://formspree.io/f/<your-form-id>` (optional fallback/parallel notification from checkout UI)
 
 Example:
 
@@ -19,12 +20,18 @@ Example:
 - `ADMIN_JWT_SECRET=<strong-random-secret>`
 - `ADMIN_EMAIL=<admin-email>`
 - `ADMIN_PASSWORD=<admin-password-or-bcrypt-hash>`
+- `FORMSPREE_ORDER_ENDPOINT=https://formspree.io/f/<your-form-id>`
+- `FORMSPREE_CONTACT_ENDPOINT=https://formspree.io/f/<your-form-id>`
 
 Notes:
 
 - `FRONTEND_URL` can contain multiple comma-separated origins if needed.
 - In production, auth cookie is set with `secure: true` and `sameSite: "none"`.
 - Frontend requests already send credentials (`credentials: "include"`) and include Bearer token when available.
+- On every successful order placement, backend posts full order details to `FORMSPREE_ORDER_ENDPOINT` if it is configured.
+- If `NEXT_PUBLIC_FORMSPREE_ORDER_ENDPOINT` is set, frontend checkout also posts successful orders to Formspree.
+- If both frontend and backend Formspree order endpoints are set to the same form, you will receive duplicate order emails.
+- On every successful contact submission, backend posts contact details to `FORMSPREE_CONTACT_ENDPOINT` if it is configured.
 
 ## Getting Started
 

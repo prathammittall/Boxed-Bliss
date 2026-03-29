@@ -16,6 +16,31 @@ function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+type ClientContext = {
+  sourcePage: string;
+  referrer: string;
+  userAgent: string;
+  submittedAt: string;
+};
+
+function getClientContext(): ClientContext {
+  if (typeof window === "undefined") {
+    return {
+      sourcePage: "",
+      referrer: "",
+      userAgent: "",
+      submittedAt: new Date().toISOString(),
+    };
+  }
+
+  return {
+    sourcePage: window.location.href,
+    referrer: document.referrer || "",
+    userAgent: window.navigator.userAgent || "",
+    submittedAt: new Date().toISOString(),
+  };
+}
+
 type PrimitiveQueryValue = string | number | boolean;
 
 type QueryParams = Record<string, PrimitiveQueryValue | null | undefined>;
@@ -340,6 +365,15 @@ export const api = {
     request<ApiEnvelope<Order[]>>("/api/orders", {
       query,
     }),
+  trackOrder: async (payload: { orderId: string; email: string }) =>
+    extractEnvelopeData(
+      await request<ApiEnvelope<Order>>("/api/orders/track", {
+        query: {
+          orderId: payload.orderId,
+          email: payload.email,
+        },
+      })
+    ),
   getOrder: async (id: string) => extractEnvelopeData(await request<ApiEnvelope<Order>>(`/api/orders/${id}`)),
   createOrder: async (payload: {
     customerName: string;
@@ -352,11 +386,12 @@ export const api = {
     couponCode?: string;
     notes?: string;
     items: Array<{ productId: string; quantity: number; variantInfo?: string }>;
+    clientContext?: ClientContext;
   }) =>
     extractEnvelopeData(
       await request<ApiEnvelope<Order>>("/api/orders", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, clientContext: payload.clientContext ?? getClientContext() }),
       })
     ),
   updateOrder: async (id: string, payload: { status?: string; notes?: string }) =>
@@ -433,11 +468,12 @@ export const api = {
     phone?: string;
     subject?: string;
     message: string;
+    clientContext?: ClientContext;
   }) =>
     extractEnvelopeData(
       await request<ApiEnvelope<ContactSubmission>>("/api/contacts", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, clientContext: payload.clientContext ?? getClientContext() }),
       })
     ),
   updateContact: async (id: string, read: boolean) =>

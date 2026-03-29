@@ -53,13 +53,10 @@ export default async function Home() {
   const featuredProducts = productsResult.status === "fulfilled" ? productsResult.value.data : [];
   const categories = categoriesResult.status === "fulfilled" ? categoriesResult.value : [];
 
-  const pipeCleanerMatches = featuredProducts.filter(
-    (product) => hasKeyword(product, "pipe") || hasKeyword(product, "cleaner")
-  );
-  const pipeCleanerCards = (pipeCleanerMatches.length ? pipeCleanerMatches : featuredProducts).slice(0, 3);
+  const featuredCards = featuredProducts.slice(0, 3);
 
-  const selectedPipeCleanerIds = new Set(pipeCleanerCards.map((item) => item.id));
-  const hamperPool = featuredProducts.filter((item) => !selectedPipeCleanerIds.has(item.id));
+  const selectedFeaturedIds = new Set(featuredCards.map((item) => item.id));
+  const hamperPool = featuredProducts.filter((item) => !selectedFeaturedIds.has(item.id));
   const hamperMatches = hamperPool.filter(
     (product) => hasKeyword(product, "hamper") || hasKeyword(product, "gift")
   );
@@ -119,9 +116,9 @@ export default async function Home() {
         </section>
 
         <section className="mt-20">
-          <SectionTitle title="Pipe Cleaner Creations" />
+          <SectionTitle title="Featured Products" />
           <div className="grid gap-5 md:grid-cols-3">
-            {pipeCleanerCards.map((card) => (
+            {featuredCards.map((card) => (
               <article key={card.id} className="soft-panel overflow-hidden">
                 <div className="photo-panel relative min-h-[330px] sm:min-h-[360px]">
                   <Image
@@ -140,7 +137,7 @@ export default async function Home() {
                 </div>
               </article>
             ))}
-            {pipeCleanerCards.length === 0 ? (
+            {featuredCards.length === 0 ? (
               <article className="soft-panel p-5 text-sm text-rose-muted md:col-span-3">
                 Featured products are not available right now. Please try again shortly.
               </article>
@@ -252,7 +249,7 @@ export default async function Home() {
           </div>
         </section> */}
 
-        <section className="mt-20">
+        {/* <section className="mt-20">
           <div className="mb-7 text-center">
             <h2 className="font-display text-5xl leading-tight text-rose-ink">Floral Narratives</h2>
             <p className="font-script text-4xl leading-none text-rose-accent">Freshly crafted bloom stories</p>
@@ -310,7 +307,7 @@ export default async function Home() {
               </article>
             </div>
           </div>
-        </section>
+        </section> */}
 
         {productsResult.status === "rejected" || categoriesResult.status === "rejected" ? (
           <section className="mt-10">
