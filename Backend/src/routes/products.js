@@ -109,14 +109,25 @@ router.post("/", adminGuard, async (req, res) => {
     const db = getDb();
     const { name, slug, description, price, comparePrice, images, inStock, featured, categoryId, variants } = req.body;
 
-    if (!name || !slug || price === undefined || !categoryId) {
-      res.status(400).json({ error: "name, slug, price, and categoryId are required" });
+    if (!name || !slug || price === undefined) {
+      res.status(400).json({ error: "name, slug, and price are required" });
       return;
     }
 
-    const catOid = toObjectId(categoryId);
-    const catExists = await db.collection("Category").findOne({ _id: catOid }, { projection: { _id: 1 } });
-    if (!catExists) { res.status(400).json({ error: "Invalid categoryId" }); return; }
+    let catOid = null;
+    if (categoryId) {
+      catOid = toObjectId(categoryId);
+      if (!catOid) {
+        res.status(400).json({ error: "Invalid categoryId" });
+        return;
+      }
+
+      const catExists = await db.collection("Category").findOne({ _id: catOid }, { projection: { _id: 1 } });
+      if (!catExists) {
+        res.status(400).json({ error: "Invalid categoryId" });
+        return;
+      }
+    }
 
     const now = new Date();
     const doc = {
@@ -178,7 +189,24 @@ router.put("/:id", adminGuard, async (req, res) => {
     if (images !== undefined) update.images = images;
     if (inStock !== undefined) update.inStock = inStock;
     if (featured !== undefined) update.featured = featured;
-    if (categoryId !== undefined) update.categoryId = categoryId ? toObjectId(categoryId) : null;
+    if (categoryId !== undefined) {
+      if (!categoryId) {
+        update.categoryId = null;
+      } else {
+        const catOid = toObjectId(categoryId);
+        if (!catOid) {
+          res.status(400).json({ error: "Invalid categoryId" });
+          return;
+        }
+
+        const catExists = await db.collection("Category").findOne({ _id: catOid }, { projection: { _id: 1 } });
+        if (!catExists) {
+          res.status(400).json({ error: "Invalid categoryId" });
+          return;
+        }
+        update.categoryId = catOid;
+      }
+    }
 
     const result = await db.collection("Product").findOneAndUpdate(
       { _id: oid },
@@ -203,6 +231,7 @@ router.put("/:id", adminGuard, async (req, res) => {
       },
     });
   } catch (err) {
+    if (err.code === 11000) { res.status(409).json({ error: "Slug already exists" }); return; }
     console.error(err);
     res.status(500).json({ error: "Failed to update product" });
   }

@@ -9,6 +9,15 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSlug, setEditSlug] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editComparePrice, setEditComparePrice] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editInStock, setEditInStock] = useState(true);
+  const [editFeatured, setEditFeatured] = useState(false);
 
   async function loadProducts() {
     setLoading(true);
@@ -91,6 +100,90 @@ export default function AdminProductsPage() {
     }
   }
 
+  function startEdit(product: Product) {
+    setEditingProductId(product.id);
+    setEditName(product.name);
+    setEditSlug(product.slug);
+    setEditPrice(String(product.price));
+    setEditComparePrice(product.comparePrice != null ? String(product.comparePrice) : "");
+    setEditCategoryId(product.category?.id ?? "");
+    setEditDescription(product.description ?? "");
+    setEditInStock(product.inStock);
+    setEditFeatured(product.featured);
+  }
+
+  function cancelEdit() {
+    setEditingProductId(null);
+    setEditName("");
+    setEditSlug("");
+    setEditPrice("");
+    setEditComparePrice("");
+    setEditCategoryId("");
+    setEditDescription("");
+    setEditInStock(true);
+    setEditFeatured(false);
+  }
+
+  async function handleEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingProductId) return;
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const imageFileEntry = formData.get("image");
+    const imageFile = imageFileEntry instanceof File && imageFileEntry.size > 0 ? imageFileEntry : null;
+
+    const name = editName.trim();
+    const slug = editSlug.trim().toLowerCase().replace(/\s+/g, "-");
+    const price = Number(editPrice);
+    const comparePrice = editComparePrice.trim() ? Number(editComparePrice) : null;
+    const description = editDescription.trim();
+
+    if (!name || !slug || Number.isNaN(price) || price < 0) {
+      setError("Name, valid slug, and valid price are required.");
+      return;
+    }
+    if (comparePrice !== null && (Number.isNaN(comparePrice) || comparePrice < 0)) {
+      setError("Compare price must be a valid non-negative number.");
+      return;
+    }
+
+    const existingProduct = products.find((item) => item.id === editingProductId);
+    const nextImages = existingProduct?.images ? [...existingProduct.images] : [];
+
+    setSubmitting(true);
+    setError("");
+    try {
+      if (imageFile) {
+        const imageUrl = await api.uploadImageFile(imageFile, "boxed-bliss/products");
+        if (nextImages.length > 0) {
+          nextImages[0] = imageUrl;
+        } else {
+          nextImages.push(imageUrl);
+        }
+      }
+
+      const updated = await api.updateProduct(editingProductId, {
+        name,
+        slug,
+        price,
+        comparePrice,
+        categoryId: editCategoryId || null,
+        description: description || null,
+        inStock: editInStock,
+        featured: editFeatured,
+        images: nextImages,
+      });
+
+      setProducts((prev) => prev.map((item) => (item.id === editingProductId ? updated : item)));
+      cancelEdit();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to update product.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <section className="grid gap-5">
       <article className="soft-panel p-5 sm:p-6">
@@ -122,6 +215,88 @@ export default function AdminProductsPage() {
         </form>
       </article>
 
+      {editingProductId ? (
+        <article className="soft-panel p-5 sm:p-6">
+          <h3 className="font-display text-3xl text-rose-ink">Edit Product</h3>
+          <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleEdit}>
+            <input
+              value={editName}
+              onChange={(event) => setEditName(event.target.value)}
+              placeholder="Product name"
+              className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none"
+              required
+            />
+            <input
+              value={editSlug}
+              onChange={(event) => setEditSlug(event.target.value)}
+              placeholder="Slug"
+              className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none"
+              required
+            />
+            <input
+              value={editPrice}
+              onChange={(event) => setEditPrice(event.target.value)}
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Price"
+              className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none"
+              required
+            />
+            <input
+              value={editComparePrice}
+              onChange={(event) => setEditComparePrice(event.target.value)}
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Compare price (optional)"
+              className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none"
+            />
+            <select
+              value={editCategoryId}
+              onChange={(event) => setEditCategoryId(event.target.value)}
+              className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm text-rose-ink outline-none"
+            >
+              <option value="">No category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+            <input
+              name="image"
+              type="file"
+              accept="image/*"
+              className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-rose-accent/20 file:px-3 file:py-1.5 file:text-xs file:font-medium"
+            />
+            <label className="flex items-center gap-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm text-rose-ink">
+              <input type="checkbox" checked={editInStock} onChange={(event) => setEditInStock(event.target.checked)} />
+              In stock
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm text-rose-ink">
+              <input type="checkbox" checked={editFeatured} onChange={(event) => setEditFeatured(event.target.checked)} />
+              Featured
+            </label>
+            <textarea
+              value={editDescription}
+              onChange={(event) => setEditDescription(event.target.value)}
+              rows={3}
+              placeholder="Description (optional)"
+              className="md:col-span-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none"
+            />
+            <div className="flex gap-2 md:col-span-2">
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? "Saving..." : "Save changes"}
+              </button>
+              <button type="button" className="btn-ghost" onClick={cancelEdit}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </article>
+      ) : null}
+
       {error ? <article className="soft-panel p-4 text-sm text-rose-muted">{error}</article> : null}
 
       <article className="soft-panel p-5 sm:p-6">
@@ -141,9 +316,14 @@ export default function AdminProductsPage() {
                       {product.category?.name ? ` • ${product.category.name}` : ""}
                     </p>
                   </div>
-                  <button type="button" className="btn-ghost" onClick={() => handleDelete(product.id)}>
-                    Delete
-                  </button>
+                  <div className="flex gap-2">
+                    <button type="button" className="btn-ghost" onClick={() => startEdit(product)}>
+                      Edit
+                    </button>
+                    <button type="button" className="btn-ghost" onClick={() => handleDelete(product.id)}>
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))
             )}

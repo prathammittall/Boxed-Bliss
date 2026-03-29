@@ -2,6 +2,7 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingLink from "@/components/routeLoading/LoadingLink";
+import AddToCartButton from "@/components/AddToCartButton";
 import { api } from "@/lib/api";
 
 const FALLBACK_IMAGE = "/brand/logo-bg.png";
@@ -86,6 +87,15 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 <LoadingLink href={`/checkout?product=${encodeURIComponent(product.slug)}`} className="btn-primary">
                   Buy now
                 </LoadingLink>
+                <AddToCartButton
+                  item={{
+                    productId: product.id,
+                    slug: product.slug,
+                    name: product.name,
+                    price: product.price,
+                    image: product.images?.[0] ?? null,
+                  }}
+                />
                 <LoadingLink href="/shop" className="btn-ghost">
                   Back to shop
                 </LoadingLink>

@@ -87,7 +87,7 @@ router.get("/:id", async (req, res) => {
 router.post("/", adminGuard, async (req, res) => {
   try {
     const db = getDb();
-    const { name, slug, description, parentId } = req.body;
+    const { name, slug, description, parentId, image } = req.body;
 
     if (!name || !slug) {
       res.status(400).json({ error: "name and slug are required" });
@@ -99,7 +99,7 @@ router.post("/", adminGuard, async (req, res) => {
       name,
       slug: slug.toLowerCase().replace(/\s+/g, "-"),
       description: description || null,
-      image: null,
+      image: typeof image === "string" && image.trim().length > 0 ? image.trim() : null,
       parentId: parentId ? toObjectId(parentId) : null,
       createdAt: now,
       updatedAt: now,
@@ -124,12 +124,15 @@ router.put("/:id", adminGuard, async (req, res) => {
     const oid = toObjectId(req.params.id);
     if (!oid) { res.status(400).json({ error: "Invalid id" }); return; }
 
-    const { name, slug, description, parentId } = req.body;
+    const { name, slug, description, parentId, image } = req.body;
     const update = { updatedAt: new Date() };
     if (name) update.name = name;
     if (slug) update.slug = slug.toLowerCase().replace(/\s+/g, "-");
     if (description !== undefined) update.description = description;
     if (parentId !== undefined) update.parentId = parentId ? toObjectId(parentId) : null;
+    if (image !== undefined) {
+      update.image = typeof image === "string" && image.trim().length > 0 ? image.trim() : null;
+    }
 
     const result = await db.collection("Category").findOneAndUpdate(
       { _id: oid },
@@ -140,6 +143,10 @@ router.put("/:id", adminGuard, async (req, res) => {
     if (!result) { res.status(404).json({ error: "Category not found" }); return; }
     res.json({ ok: true, data: { ...result, id: result._id.toString() } });
   } catch (err) {
+    if (err.code === 11000) {
+      res.status(409).json({ error: "Slug already exists" });
+      return;
+    }
     console.error(err);
     res.status(500).json({ error: "Failed to update category" });
   }

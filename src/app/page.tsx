@@ -225,7 +225,7 @@ export default async function Home() {
           )}
         </section>
 
-        <section className="mt-16 sm:mt-20">
+        {/* <section className="mt-16 sm:mt-20">
           <div className="soft-panel grid gap-6 p-6 sm:grid-cols-[1.07fr_0.93fr] sm:p-9">
             <div>
               <p className="kicker">Bespoke</p>
@@ -250,7 +250,7 @@ export default async function Home() {
               />
             </div>
           </div>
-        </section>
+        </section> */}
 
         <section className="mt-20">
           <div className="mb-7 text-center">

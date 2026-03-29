@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import LoadingLink from "@/components/routeLoading/LoadingLink";
+import { CART_UPDATED_EVENT, getCartItems } from "@/lib/cart";
 
 const links = [
   { label: "Home", href: "/" },
@@ -16,8 +17,23 @@ const links = [
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   const activeHref = useMemo(() => pathname ?? "/", [pathname]);
+
+  useEffect(() => {
+    function refreshCount() {
+      const count = getCartItems().reduce((sum, item) => sum + item.quantity, 0);
+      setCartCount(count);
+    }
+
+    refreshCount();
+    window.addEventListener(CART_UPDATED_EVENT, refreshCount);
+
+    return () => {
+      window.removeEventListener(CART_UPDATED_EVENT, refreshCount);
+    };
+  }, []);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-rose-line/80 bg-rose-paper/95 backdrop-blur-xl">
@@ -90,9 +106,9 @@ export default function Navbar() {
           </LoadingLink>
 
           <LoadingLink
-            href="/checkout"
+            href="/cart"
             aria-label="Cart"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-line/85 bg-white/75 text-rose-muted transition hover:border-rose-accent/50 hover:text-rose-ink"
+            className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-line/85 bg-white/75 text-rose-muted transition hover:border-rose-accent/50 hover:text-rose-ink"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
               <path
@@ -104,6 +120,11 @@ export default function Navbar() {
                 strokeLinejoin="round"
               />
             </svg>
+            {cartCount > 0 ? (
+              <span className="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-rose-ink px-1 text-[10px] font-medium leading-none text-rose-paper">
+                {cartCount > 99 ? "99+" : cartCount}
+              </span>
+            ) : null}
           </LoadingLink>
 
           <button

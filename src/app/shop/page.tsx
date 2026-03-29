@@ -3,6 +3,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SectionTitle from "@/components/SectionTitle";
 import LoadingLink from "@/components/routeLoading/LoadingLink";
+import AddToCartButton from "@/components/AddToCartButton";
 import { api } from "@/lib/api";
 
 const FALLBACK_IMAGE = "/brand/logo-bg.png";
@@ -127,6 +128,17 @@ export default async function ShopPage({
                     <LoadingLink href={`/shop/${encodeURIComponent(product.slug)}`} className="btn-ghost">
                       View details
                     </LoadingLink>
+                  </div>
+                  <div className="mt-3">
+                    <AddToCartButton
+                      item={{
+                        productId: product.id,
+                        slug: product.slug,
+                        name: product.name,
+                        price: product.price,
+                        image: product.images?.[0] ?? null,
+                      }}
+                    />
                   </div>
                 </div>
               </article>

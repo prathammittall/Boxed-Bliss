@@ -7,20 +7,27 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingLink from "@/components/routeLoading/LoadingLink";
 import { ApiError, api, type Product } from "@/lib/api";
+import {
+  clearCartItems,
+  getCartItemKey,
+  getCartItems,
+  removeCartItem,
+  type CartItem,
+  updateCartItemQuantity,
+} from "@/lib/cart";
 
 const FALLBACK_IMAGE = "/brand/logo-bg.png";
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const productSlug = searchParams.get("product") ?? "";
+  const isCartMode = !productSlug;
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loadingProduct, setLoadingProduct] = useState(true);
-  const [quantity, setQuantity] = useState(1);
+  const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [couponMessage, setCouponMessage] = useState("");
   const [discount, setDiscount] = useState(0);
-  const [selectedVariant, setSelectedVariant] = useState("");
   const [submitState, setSubmitState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState("");
   const [orderId, setOrderId] = useState("");
@@ -28,37 +35,78 @@ function CheckoutContent() {
   useEffect(() => {
     let active = true;
 
-    async function loadProduct() {
-      if (!productSlug) {
-        if (active) {
-          setLoadingProduct(false);
-          setError("Please select a product before checkout.");
-        }
-        return;
-      }
-
-      setLoadingProduct(true);
+    async function loadCheckoutItems() {
+      setLoadingItems(true);
       setError("");
+
       try {
-        const result = await api.getProduct(productSlug);
+        if (isCartMode) {
+          const items = getCartItems();
+          if (!active) return;
+          setCheckoutItems(items);
+          if (items.length === 0) {
+            setError("Your cart is empty. Add products from the shop to place a collective order.");
+          }
+          return;
+        }
+
+        const product: Product = await api.getProduct(productSlug);
         if (!active) return;
-        setProduct(result);
+        setCheckoutItems([
+          {
+            productId: product.id,
+            slug: product.slug,
+            name: product.name,
+            price: product.price,
+            image: product.images?.[0] ?? null,
+            quantity: 1,
+            variantInfo: null,
+          },
+        ]);
       } catch (err) {
         if (!active) return;
-        setError(err instanceof ApiError ? err.message : "Failed to load product.");
+        setError(err instanceof ApiError ? err.message : "Failed to load checkout items.");
       } finally {
-        if (active) setLoadingProduct(false);
+        if (active) setLoadingItems(false);
       }
     }
 
-    loadProduct();
+    loadCheckoutItems();
     return () => {
       active = false;
     };
-  }, [productSlug]);
+  }, [isCartMode, productSlug]);
 
-  const subtotal = useMemo(() => (product ? product.price * quantity : 0), [product, quantity]);
+  const subtotal = useMemo(
+    () => checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [checkoutItems]
+  );
   const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
+
+  function handleQuantityChange(itemKey: string, quantity: number) {
+    const nextQuantity = Math.max(1, Number(quantity) || 1);
+    setCheckoutItems((prev) =>
+      prev.map((item) =>
+        getCartItemKey(item) === itemKey
+          ? {
+              ...item,
+              quantity: nextQuantity,
+            }
+          : item
+      )
+    );
+
+    if (isCartMode) {
+      updateCartItemQuantity(itemKey, nextQuantity);
+    }
+  }
+
+  function handleRemoveItem(itemKey: string) {
+    setCheckoutItems((prev) => prev.filter((item) => getCartItemKey(item) !== itemKey));
+    if (isCartMode) {
+      removeCartItem(itemKey);
+    }
+  }
 
   async function handleValidateCoupon() {
     if (!couponCode.trim()) {
@@ -84,7 +132,11 @@ function CheckoutContent() {
 
   async function handlePlaceOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!product) return;
+    if (checkoutItems.length === 0) {
+      setSubmitState("error");
+      setError("Your cart is empty.");
+      return;
+    }
 
     const form = event.currentTarget;
     const formData = new FormData(form);
@@ -118,13 +170,11 @@ function CheckoutContent() {
         pincode,
         couponCode: discount > 0 ? couponCode.trim().toUpperCase() : undefined,
         notes: notes || undefined,
-        items: [
-          {
-            productId: product.id,
-            quantity,
-            variantInfo: selectedVariant || undefined,
-          },
-        ],
+        items: checkoutItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          variantInfo: item.variantInfo ?? undefined,
+        })),
       });
 
       setOrderId(order.id);
@@ -133,8 +183,12 @@ function CheckoutContent() {
       setCouponCode("");
       setDiscount(0);
       setCouponMessage("");
-      setQuantity(1);
-      setSelectedVariant("");
+      if (isCartMode) {
+        clearCartItems();
+        setCheckoutItems([]);
+      } else {
+        setCheckoutItems((prev) => prev.map((item) => ({ ...item, quantity: 1 })));
+      }
     } catch (err) {
       setSubmitState("error");
       setError(err instanceof ApiError ? err.message : "Could not place order.");
@@ -150,62 +204,73 @@ function CheckoutContent() {
             <p className="kicker">Checkout</p>
             <h1 className="mt-2 font-display text-4xl text-rose-ink">Complete your order</h1>
 
-            {loadingProduct ? <p className="mt-3 text-sm text-rose-muted">Loading selected product...</p> : null}
-            {!loadingProduct && !product ? (
+            {loadingItems ? <p className="mt-3 text-sm text-rose-muted">Loading selected products...</p> : null}
+            {!loadingItems && checkoutItems.length === 0 ? (
               <div className="mt-4 rounded-xl border border-rose-line/80 bg-white/65 p-4 text-sm text-rose-muted">
-                {error || "No product selected."}
+                {error || "No products selected."}
                 <div className="mt-3">
-                  <LoadingLink href="/shop" className="btn-ghost">Back to shop</LoadingLink>
+                  <LoadingLink href="/shop" className="btn-ghost">
+                    Back to shop
+                  </LoadingLink>
                 </div>
               </div>
             ) : null}
 
-            {product ? (
+            {checkoutItems.length > 0 ? (
               <div className="mt-4 rounded-xl border border-rose-line/80 bg-white/65 p-4">
-                <div className="flex gap-3">
-                  <div className="relative h-24 w-24 overflow-hidden rounded-xl border border-white/70 bg-rose-soft">
-                    <Image
-                      src={product.images[0] || FALLBACK_IMAGE}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                      sizes="96px"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-rose-ink">{product.name}</p>
-                    <p className="text-xs text-rose-muted">Rs. {product.price.toFixed(2)} each</p>
-                    <div className="mt-3 flex items-center gap-2">
-                      <label htmlFor="qty" className="text-xs text-rose-muted">Qty</label>
-                      <input
-                        id="qty"
-                        type="number"
-                        min={1}
-                        value={quantity}
-                        onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
-                        className="w-20 rounded-lg border border-rose-line/80 bg-white px-3 py-2 text-sm outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <p className="text-sm font-medium text-rose-ink">
+                  {isCartMode ? "Collective order summary" : "Selected product"}
+                </p>
 
-                {product.variants?.length ? (
-                  <div className="mt-4">
-                    <label className="text-xs text-rose-muted">Variant</label>
-                    <select
-                      value={selectedVariant}
-                      onChange={(event) => setSelectedVariant(event.target.value)}
-                      className="mt-2 w-full rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none"
-                    >
-                      <option value="">Select variant (optional)</option>
-                      {product.variants.map((variant) => (
-                        <option key={variant.id} value={`${variant.label}: ${variant.value}`}>
-                          {variant.label}: {variant.value}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : null}
+                <div className="mt-3 grid gap-3">
+                  {checkoutItems.map((item) => {
+                    const itemKey = getCartItemKey(item);
+                    return (
+                      <div key={itemKey} className="rounded-xl border border-rose-line/80 bg-white/60 p-3">
+                        <div className="flex gap-3">
+                          <div className="relative h-24 w-24 overflow-hidden rounded-xl border border-white/70 bg-rose-soft">
+                            <Image
+                              src={item.image || FALLBACK_IMAGE}
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                              sizes="96px"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-rose-ink">{item.name}</p>
+                            <p className="text-xs text-rose-muted">Rs. {item.price.toFixed(2)} each</p>
+                            {item.variantInfo ? (
+                              <p className="mt-1 text-xs text-rose-muted">Variant: {item.variantInfo}</p>
+                            ) : null}
+                            <div className="mt-3 flex items-center gap-2">
+                              <label htmlFor={`qty-${itemKey}`} className="text-xs text-rose-muted">
+                                Qty
+                              </label>
+                              <input
+                                id={`qty-${itemKey}`}
+                                type="number"
+                                min={1}
+                                value={item.quantity}
+                                onChange={(event) => handleQuantityChange(itemKey, Number(event.target.value))}
+                                className="w-20 rounded-lg border border-rose-line/80 bg-white px-3 py-2 text-sm outline-none"
+                              />
+                              {isCartMode ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveItem(itemKey)}
+                                  className="text-xs text-rose-muted underline"
+                                >
+                                  Remove
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
                 <div className="mt-4 grid gap-2 rounded-xl border border-rose-line/80 bg-white/60 p-3 text-sm text-rose-muted">
                   <p>Subtotal: Rs. {subtotal.toFixed(2)}</p>
@@ -244,7 +309,11 @@ function CheckoutContent() {
               <textarea name="notes" placeholder="Notes (optional)" rows={3} className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
 
               <div className="mt-2 flex items-center gap-3">
-                <button type="submit" className="btn-primary" disabled={!product || submitState === "submitting"}>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={checkoutItems.length === 0 || submitState === "submitting"}
+                >
                   {submitState === "submitting" ? "Placing order..." : "Place order"}
                 </button>
                 {submitState === "success" ? (
