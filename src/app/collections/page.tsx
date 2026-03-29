@@ -7,6 +7,16 @@ import { api } from "@/lib/api";
 
 const FALLBACK_IMAGE = "/brand/logo-bg.png";
 
+function getCategoryImage(image?: string | null, featuredImage?: string): string {
+  if (typeof image === "string" && image.trim().length > 0) {
+    return image;
+  }
+  if (typeof featuredImage === "string" && featuredImage.trim().length > 0) {
+    return featuredImage;
+  }
+  return FALLBACK_IMAGE;
+}
+
 function BigTile({
   title,
   subtitle,
@@ -82,7 +92,7 @@ export default async function CollectionsPage() {
               key={category.id}
               title={category.name}
               subtitle={category.description || "A premium handcrafted curation for meaningful gifting."}
-              imageSrc={FALLBACK_IMAGE}
+              imageSrc={getCategoryImage(category.image, featuredProducts[0]?.images?.[0])}
               href={`/shop?category=${encodeURIComponent(category.id)}`}
             />
           ))}

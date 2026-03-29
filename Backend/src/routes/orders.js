@@ -35,6 +35,8 @@ async function notifyFormspreeAboutOrder({ orderId, orderDoc, itemDocs }) {
     `Subtotal: ${orderDoc.subtotal}`,
     `Discount: ${orderDoc.discount}`,
     `Total: ${orderDoc.total}`,
+    `Payment Method: ${orderDoc.paymentMethod ?? "N/A"}`,
+    `Payment Proof URL: ${orderDoc.paymentProofUrl ?? "N/A"}`,
     `Coupon: ${orderDoc.couponCode ?? "N/A"}`,
     `Status: ${orderDoc.status}`,
     `Notes: ${orderDoc.notes ?? "N/A"}`,
@@ -56,6 +58,9 @@ async function notifyFormspreeAboutOrder({ orderId, orderDoc, itemDocs }) {
     subtotal: orderDoc.subtotal,
     discount: orderDoc.discount,
     total: orderDoc.total,
+    paymentMethod: orderDoc.paymentMethod ?? "",
+    paymentProofUrl: orderDoc.paymentProofUrl ?? "",
+    paymentProofPublicId: orderDoc.paymentProofPublicId ?? "",
     couponCode: orderDoc.couponCode ?? "",
     orderStatus: orderDoc.status,
     notes: orderDoc.notes ?? "",
@@ -243,10 +248,24 @@ router.post("/", async (req, res) => {
       customerName, customerEmail, customerPhone,
       shippingAddress, city, state, pincode,
       items, couponCode, notes,
+      paymentMethod, paymentProofUrl, paymentProofPublicId,
     } = req.body;
 
     if (!customerName || !customerEmail || !shippingAddress || !city || !pincode || !items?.length) {
       res.status(400).json({ error: "Missing required order fields" });
+      return;
+    }
+
+    const normalizedPaymentMethod = typeof paymentMethod === "string" && paymentMethod.trim().length > 0
+      ? paymentMethod.trim().toUpperCase()
+      : "UPI";
+
+    const normalizedPaymentProofUrl = typeof paymentProofUrl === "string" ? paymentProofUrl.trim() : "";
+    const normalizedPaymentProofPublicId =
+      typeof paymentProofPublicId === "string" ? paymentProofPublicId.trim() : "";
+
+    if (normalizedPaymentMethod === "UPI" && !normalizedPaymentProofUrl) {
+      res.status(400).json({ error: "Payment screenshot is required for UPI orders" });
       return;
     }
 
@@ -300,6 +319,9 @@ router.post("/", async (req, res) => {
       customerName, customerEmail, customerPhone: customerPhone || null,
       shippingAddress, city, state: state || null, pincode,
       subtotal, discount, total,
+      paymentMethod: normalizedPaymentMethod,
+      paymentProofUrl: normalizedPaymentProofUrl || null,
+      paymentProofPublicId: normalizedPaymentProofPublicId || null,
       couponCode: couponCode?.toUpperCase() ?? null,
       status: "PENDING",
       notes: notes || null,

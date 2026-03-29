@@ -18,6 +18,9 @@ import {
 
 const FALLBACK_IMAGE = "/brand/logo-bg.png";
 const ORDER_FORMSPREE_ENDPOINT = (process.env.NEXT_PUBLIC_FORMSPREE_ORDER_ENDPOINT ?? "").trim();
+const UPI_ID = (process.env.NEXT_PUBLIC_UPI_ID ?? "").trim();
+const UPI_NAME = (process.env.NEXT_PUBLIC_UPI_NAME ?? "Boxed Bliss").trim();
+const UPI_QR_IMAGE = (process.env.NEXT_PUBLIC_UPI_QR_IMAGE ?? "").trim();
 
 function formatOrderItemsForEmail(items: Array<{ productName: string; quantity: number; price: number; variantInfo?: string | null }>) {
   return items
@@ -126,6 +129,11 @@ function CheckoutContent() {
   const [error, setError] = useState("");
   const [orderId, setOrderId] = useState("");
   const [orderTrackingEmail, setOrderTrackingEmail] = useState("");
+  const [paymentScreenshotFile, setPaymentScreenshotFile] = useState<File | null>(null);
+  const [paymentProofUrl, setPaymentProofUrl] = useState("");
+  const [paymentProofPublicId, setPaymentProofPublicId] = useState("");
+  const [paymentUploadState, setPaymentUploadState] = useState<"idle" | "uploading" | "uploaded" | "error">("idle");
+  const [paymentUploadMessage, setPaymentUploadMessage] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -178,6 +186,24 @@ function CheckoutContent() {
   );
   const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
 
+  const upiIntentUrl = useMemo(() => {
+    if (!UPI_ID) return "";
+    const params = new URLSearchParams({
+      pa: UPI_ID,
+      pn: UPI_NAME,
+      tn: "Boxed Bliss Order Payment",
+      cu: "INR",
+      am: total.toFixed(2),
+    });
+    return `upi://pay?${params.toString()}`;
+  }, [total]);
+
+  const upiQrCodeUrl = useMemo(() => {
+    if (UPI_QR_IMAGE) return UPI_QR_IMAGE;
+    if (!upiIntentUrl) return "";
+    return `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(upiIntentUrl)}`;
+  }, [upiIntentUrl]);
+
   function handleQuantityChange(itemKey: string, quantity: number) {
     const nextQuantity = Math.max(1, Number(quantity) || 1);
     setCheckoutItems((prev) =>
@@ -225,6 +251,38 @@ function CheckoutContent() {
     }
   }
 
+  function handlePaymentScreenshotChange(file: File | null) {
+    setPaymentScreenshotFile(file);
+    setPaymentProofUrl("");
+    setPaymentProofPublicId("");
+    setPaymentUploadState("idle");
+    setPaymentUploadMessage(file ? "Screenshot selected. It will be uploaded before placing the order." : "");
+  }
+
+  async function uploadPaymentProofIfNeeded() {
+    if (paymentProofUrl && paymentProofPublicId) {
+      return { paymentProofUrl, paymentProofPublicId };
+    }
+
+    if (!paymentScreenshotFile) {
+      throw new Error("Please upload your UPI payment screenshot before placing the order.");
+    }
+
+    setPaymentUploadState("uploading");
+    setPaymentUploadMessage("Uploading payment screenshot...");
+
+    const formData = new FormData();
+    formData.append("image", paymentScreenshotFile);
+
+    const upload = await api.uploadPaymentProof(formData);
+    setPaymentProofUrl(upload.url);
+    setPaymentProofPublicId(upload.publicId);
+    setPaymentUploadState("uploaded");
+    setPaymentUploadMessage("Payment screenshot uploaded successfully.");
+
+    return { paymentProofUrl: upload.url, paymentProofPublicId: upload.publicId };
+  }
+
   async function handlePlaceOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (checkoutItems.length === 0) {
@@ -255,6 +313,8 @@ function CheckoutContent() {
     setError("");
 
     try {
+      const paymentProof = await uploadPaymentProofIfNeeded();
+
       const order = await api.createOrder({
         customerName,
         customerEmail,
@@ -263,6 +323,9 @@ function CheckoutContent() {
         city,
         state: state || undefined,
         pincode,
+        paymentMethod: "UPI",
+        paymentProofUrl: paymentProof.paymentProofUrl,
+        paymentProofPublicId: paymentProof.paymentProofPublicId,
         couponCode: discount > 0 ? couponCode.trim().toUpperCase() : undefined,
         notes: notes || undefined,
         items: checkoutItems.map((item) => ({
@@ -287,6 +350,11 @@ function CheckoutContent() {
       setCouponCode("");
       setDiscount(0);
       setCouponMessage("");
+      setPaymentScreenshotFile(null);
+      setPaymentProofUrl("");
+      setPaymentProofPublicId("");
+      setPaymentUploadState("idle");
+      setPaymentUploadMessage("");
       if (isCartMode) {
         clearCartItems();
         setCheckoutItems([]);
@@ -401,6 +469,55 @@ function CheckoutContent() {
           <article className="soft-panel p-5 sm:p-6">
             <h2 className="font-display text-3xl text-rose-ink">Delivery details</h2>
             <form className="mt-4 grid gap-3" onSubmit={handlePlaceOrder}>
+              <div className="rounded-xl border border-rose-line/80 bg-white/65 p-4">
+                <p className="text-sm font-medium text-rose-ink">Pay Online via UPI</p>
+                <p className="mt-1 text-xs leading-5 text-rose-muted">
+                  Scan the QR code and complete payment of Rs. {total.toFixed(2)} before placing your order.
+                </p>
+                <p className="mt-1 text-xs text-rose-muted">UPI ID: {UPI_ID || "Please configure NEXT_PUBLIC_UPI_ID"}</p>
+
+                {upiQrCodeUrl ? (
+                  <div className="mt-3 overflow-hidden rounded-xl border border-rose-line/80 bg-white p-2">
+                    <img
+                      src={upiQrCodeUrl}
+                      alt="UPI QR code"
+                      className="mx-auto h-64 w-64 rounded-lg object-contain sm:h-72 sm:w-72"
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-3 rounded-lg border border-rose-line/80 bg-white/70 p-3 text-xs text-rose-muted">
+                    QR code is unavailable. Set NEXT_PUBLIC_UPI_ID or NEXT_PUBLIC_UPI_QR_IMAGE in frontend env.
+                  </p>
+                )}
+
+                {upiIntentUrl ? (
+                  <a href={upiIntentUrl} className="mt-3 inline-flex text-xs text-rose-ink underline">
+                    Open UPI app on this device
+                  </a>
+                ) : null}
+
+                <div className="mt-4">
+                  <label htmlFor="paymentScreenshot" className="text-xs text-rose-muted">
+                    Upload payment confirmation screenshot *
+                  </label>
+                  <input
+                    id="paymentScreenshot"
+                    name="paymentScreenshot"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    required
+                    onChange={(event) => handlePaymentScreenshotChange(event.target.files?.[0] ?? null)}
+                    className="mt-2 w-full rounded-xl border border-rose-line/80 bg-white/70 px-3 py-2 text-sm outline-none"
+                  />
+                  {paymentUploadMessage ? (
+                    <p className="mt-2 text-xs text-rose-muted">{paymentUploadMessage}</p>
+                  ) : null}
+                  {paymentUploadState === "uploading" ? (
+                    <p className="mt-1 text-xs text-rose-muted">Uploading to secure storage...</p>
+                  ) : null}
+                </div>
+              </div>
+
               <input name="customerName" placeholder="Full name *" required className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
               <input name="customerEmail" type="email" placeholder="Email *" required className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
               <input name="customerPhone" type="tel" placeholder="Phone" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />

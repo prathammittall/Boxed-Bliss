@@ -147,6 +147,9 @@ export type Order = {
   subtotal: number;
   discount: number;
   total: number;
+  paymentMethod?: string | null;
+  paymentProofUrl?: string | null;
+  paymentProofPublicId?: string | null;
   couponCode?: string | null;
   notes?: string | null;
   status: string;
@@ -293,6 +296,11 @@ export const api = {
       method: "POST",
       body: formData,
     }),
+  uploadPaymentProof: (formData: FormData) =>
+    request<{ ok: true; url: string; publicId: string }>("/api/upload/payment-proof", {
+      method: "POST",
+      body: formData,
+    }),
   uploadImageFile: async (file: File, folder?: string) => {
     const formData = new FormData();
     formData.append("image", file);
@@ -385,6 +393,9 @@ export const api = {
     pincode: string;
     couponCode?: string;
     notes?: string;
+    paymentMethod?: string;
+    paymentProofUrl?: string;
+    paymentProofPublicId?: string;
     items: Array<{ productId: string; quantity: number; variantInfo?: string }>;
     clientContext?: ClientContext;
   }) =>

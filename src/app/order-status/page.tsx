@@ -208,6 +208,19 @@ function OrderStatusContent() {
                 <div className="mt-4 grid gap-2 rounded-xl border border-rose-line/80 bg-white/60 p-4 text-sm text-rose-muted">
                   <p>Subtotal: Rs. {Number(order.subtotal).toFixed(2)}</p>
                   <p>Discount: Rs. {Number(order.discount).toFixed(2)}</p>
+                  <p>Payment Method: {order.paymentMethod || "N/A"}</p>
+                  {order.paymentProofUrl ? (
+                    <a
+                      href={order.paymentProofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-rose-ink underline"
+                    >
+                      View uploaded payment screenshot
+                    </a>
+                  ) : (
+                    <p>Payment Screenshot: N/A</p>
+                  )}
                   <p className="font-medium text-rose-ink">Total: Rs. {Number(order.total).toFixed(2)}</p>
                 </div>
               </>

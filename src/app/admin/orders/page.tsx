@@ -149,6 +149,19 @@ export default function AdminOrdersPage() {
                         <p>Discount: {formatCurrency(order.discount)}</p>
                         <p>Total: {formatCurrency(order.total)}</p>
                         <p>Coupon: {order.couponCode || "N/A"}</p>
+                        <p>Payment Method: {order.paymentMethod || "N/A"}</p>
+                        {order.paymentProofUrl ? (
+                          <a
+                            href={order.paymentProofUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-rose-ink underline"
+                          >
+                            View payment screenshot
+                          </a>
+                        ) : (
+                          <p>Payment Screenshot: N/A</p>
+                        )}
                       </div>
                     </div>
 

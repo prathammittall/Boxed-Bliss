@@ -44,7 +44,7 @@ function SectionTitle({
 }
 
 export default async function Home() {
-  const heroImage = "/brand/herosection.png";
+  const heroImage = "/brand/herosections.png";
   const [productsResult, categoriesResult] = await Promise.allSettled([
     api.getProducts({ featured: true, inStock: true, limit: 18 }),
     api.getCategoriesFlat(),
@@ -105,7 +105,7 @@ export default async function Home() {
                     alt="The Boxed Bliss hero"
                     fill
                     priority
-                    className="object-cover"
+                    className="object-contain"
                     sizes="(max-width: 1024px) 100vw, 45vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-rose-paper/10 via-transparent to-rose-paper/14" />
