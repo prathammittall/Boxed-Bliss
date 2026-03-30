@@ -95,6 +95,8 @@ export type Product = {
   images: string[];
   inStock: boolean;
   featured: boolean;
+  occasion?: boolean;
+  moreToExplore?: boolean;
   categoryId?: string | null;
   category?: Category | null;
   variants?: ProductVariant[];
@@ -339,6 +341,9 @@ export const api = {
   getProducts: (query?: {
     category?: string;
     featured?: boolean;
+    occasion?: boolean;
+    moreToExplore?: boolean;
+    visibleOnFrontend?: boolean;
     inStock?: boolean;
     search?: string;
     page?: number;

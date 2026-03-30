@@ -44,26 +44,30 @@ function SectionTitle({
 }
 
 export default async function Home() {
-  const heroImage = "/brand/herosections.png";
-  const [productsResult, categoriesResult] = await Promise.allSettled([
+  const heroImage = "/brand/herosection.png";
+  const [featuredProductsResult, occasionProductsResult, exploreProductsResult, categoriesResult] = await Promise.allSettled([
     api.getProducts({ featured: true, inStock: true, limit: 18 }),
+    api.getProducts({ occasion: true, inStock: true, limit: 18 }),
+    api.getProducts({ moreToExplore: true, inStock: true, limit: 18 }),
     api.getCategoriesFlat(),
   ]);
 
-  const featuredProducts = productsResult.status === "fulfilled" ? productsResult.value.data : [];
+  const featuredProducts =
+    featuredProductsResult.status === "fulfilled" ? featuredProductsResult.value.data : [];
+  const occasionProducts =
+    occasionProductsResult.status === "fulfilled" ? occasionProductsResult.value.data : [];
+  const exploreProducts =
+    exploreProductsResult.status === "fulfilled" ? exploreProductsResult.value.data : [];
   const categories = categoriesResult.status === "fulfilled" ? categoriesResult.value : [];
 
   const featuredCards = featuredProducts.slice(0, 3);
-
-  const selectedFeaturedIds = new Set(featuredCards.map((item) => item.id));
-  const hamperPool = featuredProducts.filter((item) => !selectedFeaturedIds.has(item.id));
-  const hamperMatches = hamperPool.filter(
+  const hamperPool = occasionProducts.filter(
     (product) => hasKeyword(product, "hamper") || hasKeyword(product, "gift")
   );
-  const hamperCards = (hamperMatches.length ? hamperMatches : hamperPool).slice(0, 3);
+  const hamperCards = (hamperPool.length ? hamperPool : occasionProducts).slice(0, 3);
 
   const shopByPurpose = categories.slice(0, 4);
-  const movingCarouselItems = featuredProducts.slice(0, 6).map((product) => ({
+  const movingCarouselItems = exploreProducts.slice(0, 6).map((product) => ({
     title: product.name,
     subtitle: product.description || "Crafted to elevate heartfelt gifting moments.",
     href: `/shop/${encodeURIComponent(product.slug)}`,
@@ -105,7 +109,7 @@ export default async function Home() {
                     alt="The Boxed Bliss hero"
                     fill
                     priority
-                    className="object-contain"
+                    className="object-cover"
                     sizes="(max-width: 1024px) 100vw, 45vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-rose-paper/10 via-transparent to-rose-paper/14" />
@@ -309,7 +313,10 @@ export default async function Home() {
           </div>
         </section> */}
 
-        {productsResult.status === "rejected" || categoriesResult.status === "rejected" ? (
+        {featuredProductsResult.status === "rejected" ||
+        occasionProductsResult.status === "rejected" ||
+        exploreProductsResult.status === "rejected" ||
+        categoriesResult.status === "rejected" ? (
           <section className="mt-10">
             <article className="soft-panel p-5 text-sm text-rose-muted">
               Some live storefront sections may be unavailable until the backend connection is restored.

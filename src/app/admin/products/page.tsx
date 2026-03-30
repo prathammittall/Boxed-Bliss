@@ -18,6 +18,8 @@ export default function AdminProductsPage() {
   const [editDescription, setEditDescription] = useState("");
   const [editInStock, setEditInStock] = useState(true);
   const [editFeatured, setEditFeatured] = useState(false);
+  const [editOccasion, setEditOccasion] = useState(false);
+  const [editMoreToExplore, setEditMoreToExplore] = useState(false);
 
   async function loadProducts() {
     setLoading(true);
@@ -58,6 +60,10 @@ export default function AdminProductsPage() {
     const description = String(formData.get("description") ?? "").trim();
     const imageFileEntry = formData.get("image");
     const imageFile = imageFileEntry instanceof File && imageFileEntry.size > 0 ? imageFileEntry : null;
+    const inStock = formData.get("inStock") === "on";
+    const featured = formData.get("featured") === "on";
+    const occasion = formData.get("occasion") === "on";
+    const moreToExplore = formData.get("moreToExplore") === "on";
     const slug = (slugInput || name).toLowerCase().replace(/\s+/g, "-");
 
     if (!name || !slug || Number.isNaN(priceValue) || priceValue < 0) {
@@ -79,6 +85,10 @@ export default function AdminProductsPage() {
         price: priceValue,
         description: description || undefined,
         categoryId: categoryIdInput || undefined,
+        inStock,
+        featured,
+        occasion,
+        moreToExplore,
         images: imageUrl ? [imageUrl] : [],
       });
       form.reset();
@@ -110,6 +120,8 @@ export default function AdminProductsPage() {
     setEditDescription(product.description ?? "");
     setEditInStock(product.inStock);
     setEditFeatured(product.featured);
+    setEditOccasion(product.occasion ?? false);
+    setEditMoreToExplore(product.moreToExplore ?? false);
   }
 
   function cancelEdit() {
@@ -122,6 +134,8 @@ export default function AdminProductsPage() {
     setEditDescription("");
     setEditInStock(true);
     setEditFeatured(false);
+    setEditOccasion(false);
+    setEditMoreToExplore(false);
   }
 
   async function handleEdit(event: FormEvent<HTMLFormElement>) {
@@ -172,6 +186,8 @@ export default function AdminProductsPage() {
         description: description || null,
         inStock: editInStock,
         featured: editFeatured,
+        occasion: editOccasion,
+        moreToExplore: editMoreToExplore,
         images: nextImages,
       });
 
@@ -206,6 +222,22 @@ export default function AdminProductsPage() {
             ))}
           </select>
           <input name="image" type="file" accept="image/*" className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-rose-accent/20 file:px-3 file:py-1.5 file:text-xs file:font-medium" />
+          <label className="flex items-center gap-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm text-rose-ink">
+            <input name="inStock" type="checkbox" defaultChecked />
+            In stock
+          </label>
+          <label className="flex items-center gap-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm text-rose-ink">
+            <input name="featured" type="checkbox" />
+            Featured
+          </label>
+          <label className="flex items-center gap-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm text-rose-ink">
+            <input name="occasion" type="checkbox" />
+            Occasion
+          </label>
+          <label className="flex items-center gap-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm text-rose-ink">
+            <input name="moreToExplore" type="checkbox" />
+            More to explore
+          </label>
           <textarea name="description" rows={3} placeholder="Description (optional)" className="md:col-span-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
           <div className="md:col-span-2">
             <button type="submit" className="btn-primary" disabled={submitting}>
@@ -278,6 +310,18 @@ export default function AdminProductsPage() {
               <input type="checkbox" checked={editFeatured} onChange={(event) => setEditFeatured(event.target.checked)} />
               Featured
             </label>
+            <label className="flex items-center gap-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm text-rose-ink">
+              <input type="checkbox" checked={editOccasion} onChange={(event) => setEditOccasion(event.target.checked)} />
+              Occasion
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm text-rose-ink">
+              <input
+                type="checkbox"
+                checked={editMoreToExplore}
+                onChange={(event) => setEditMoreToExplore(event.target.checked)}
+              />
+              More to explore
+            </label>
             <textarea
               value={editDescription}
               onChange={(event) => setEditDescription(event.target.value)}
@@ -314,6 +358,10 @@ export default function AdminProductsPage() {
                     <p className="text-xs text-rose-muted">
                       {product.slug} • Rs. {product.price.toFixed(2)}
                       {product.category?.name ? ` • ${product.category.name}` : ""}
+                    </p>
+                    <p className="text-xs text-rose-muted">
+                      {product.inStock ? "In stock" : "Out of stock"} • {product.featured ? "Featured" : "Not featured"} •{" "}
+                      {product.occasion ? "Occasion" : "No occasion"} • {product.moreToExplore ? "More to explore" : "Not in more to explore"}
                     </p>
                   </div>
                   <div className="flex gap-2">

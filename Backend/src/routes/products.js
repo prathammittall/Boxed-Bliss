@@ -8,20 +8,34 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const db = getDb();
-    const { category, featured, inStock, search } = req.query;
+    const { category, featured, occasion, moreToExplore, visibleOnFrontend, inStock, search } = req.query;
     const page = parseInt(req.query.page ?? "1", 10);
     const limit = parseInt(req.query.limit ?? "20", 10);
     const skip = (page - 1) * limit;
 
     const filter = {};
+    const andConditions = [];
     if (category) filter.categoryId = toObjectId(category);
     if (featured === "true") filter.featured = true;
+    if (occasion === "true") filter.occasion = true;
+    if (moreToExplore === "true") filter.moreToExplore = true;
     if (inStock === "true") filter.inStock = true;
+    if (visibleOnFrontend === "true") {
+      andConditions.push({
+        $or: [{ featured: true }, { occasion: true }, { moreToExplore: true }],
+      });
+    }
     if (search) {
-      filter.$or = [
+      andConditions.push({
+        $or: [
         { name: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
-      ];
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      filter.$and = andConditions;
     }
 
     const col = db.collection("Product");
@@ -107,7 +121,20 @@ router.get("/:id", async (req, res) => {
 router.post("/", adminGuard, async (req, res) => {
   try {
     const db = getDb();
-    const { name, slug, description, price, comparePrice, images, inStock, featured, categoryId, variants } = req.body;
+    const {
+      name,
+      slug,
+      description,
+      price,
+      comparePrice,
+      images,
+      inStock,
+      featured,
+      occasion,
+      moreToExplore,
+      categoryId,
+      variants,
+    } = req.body;
 
     if (!name || !slug || price === undefined) {
       res.status(400).json({ error: "name, slug, and price are required" });
@@ -139,6 +166,8 @@ router.post("/", adminGuard, async (req, res) => {
       images: images ?? [],
       inStock: inStock ?? true,
       featured: featured ?? false,
+      occasion: occasion ?? false,
+      moreToExplore: moreToExplore ?? false,
       categoryId: catOid,
       createdAt: now,
       updatedAt: now,
@@ -179,7 +208,19 @@ router.put("/:id", adminGuard, async (req, res) => {
     const oid = toObjectId(req.params.id);
     if (!oid) { res.status(400).json({ error: "Invalid id" }); return; }
 
-    const { name, slug, description, price, comparePrice, images, inStock, featured, categoryId } = req.body;
+    const {
+      name,
+      slug,
+      description,
+      price,
+      comparePrice,
+      images,
+      inStock,
+      featured,
+      occasion,
+      moreToExplore,
+      categoryId,
+    } = req.body;
     const update = { updatedAt: new Date() };
     if (name) update.name = name;
     if (slug) update.slug = slug.toLowerCase().replace(/\s+/g, "-");
@@ -189,6 +230,8 @@ router.put("/:id", adminGuard, async (req, res) => {
     if (images !== undefined) update.images = images;
     if (inStock !== undefined) update.inStock = inStock;
     if (featured !== undefined) update.featured = featured;
+    if (occasion !== undefined) update.occasion = occasion;
+    if (moreToExplore !== undefined) update.moreToExplore = moreToExplore;
     if (categoryId !== undefined) {
       if (!categoryId) {
         update.categoryId = null;
