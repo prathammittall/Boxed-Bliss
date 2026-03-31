@@ -448,7 +448,7 @@ function CheckoutContent() {
                   className="btn-primary"
                   disabled={checkoutItems.length === 0 || submitState === "submitting" || !razorpayReady}
                 >
-                  {submitState === "submitting" ? "Processing..." : "Pay with Razorpay"}
+                  {submitState === "submitting" ? "Processing..." : "Pay Now"}
                 </button>
                 {submitState === "success" ? (
                   <div className="text-sm text-rose-ink">

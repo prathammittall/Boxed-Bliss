@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter, Dancing_Script } from "next/font/google";
 import "./globals.css";
-import FloatingContactButton from "@/components/FloatingContactButton";
+// import FloatingContactButton from "@/components/FloatingContactButton";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -40,7 +40,7 @@ export default function RootLayout({
     >
       <body className="min-h-full antialiased">
         {children}
-        <FloatingContactButton />
+        {/* <FloatingContactButton /> */}
       </body>
     </html>
   );
