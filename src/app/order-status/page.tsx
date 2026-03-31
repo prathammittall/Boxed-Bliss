@@ -135,7 +135,7 @@ function OrderStatusContent() {
                 placeholder="Email used at checkout"
                 className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none"
               />
-              <div className="mt-1 flex items-center gap-3">
+              <div className="mt-1 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
                 <button type="submit" className="btn-primary" disabled={submitState === "loading"}>
                   {submitState === "loading" ? "Checking..." : "Check status"}
                 </button>
@@ -155,7 +155,7 @@ function OrderStatusContent() {
                   <p>Status: {order.status}</p>
                 </div>
 
-                <div className="mt-5 grid gap-2 sm:grid-cols-5">
+                <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                   {STATUS_ORDER.map((step, idx) => {
                     const isDone = idx <= currentStep;
                     return (
@@ -184,7 +184,7 @@ function OrderStatusContent() {
                   <div className="mt-3 grid gap-3">
                     {order.items.map((item) => (
                       <div key={item.id} className="rounded-xl border border-rose-line/80 bg-white/60 p-3">
-                        <div className="flex gap-3">
+                        <div className="flex flex-col gap-3 sm:flex-row">
                           <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-white/70 bg-rose-soft">
                             <Image
                               src={item.image || FALLBACK_IMAGE}

@@ -112,7 +112,7 @@ export default function AdminCouponsPage() {
                       {coupon.discountType} • {coupon.value} • {coupon.active ? "Active" : "Inactive"}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button type="button" className="btn-ghost" onClick={() => handleToggle(coupon.id, coupon.active)}>
                       {coupon.active ? "Disable" : "Enable"}
                     </button>

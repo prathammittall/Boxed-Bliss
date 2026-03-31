@@ -94,6 +94,17 @@ a {
   margin-inline: auto;
 }
 
+@media (max-width: 640px) {
+  .site-shell {
+    width: min(1360px, calc(100% - 1rem));
+  }
+
+  .btn-primary,
+  .btn-ghost {
+    width: 100%;
+  }
+}
+
 .kicker {
   font-size: 0.66rem;
   letter-spacing: 0.19em;
@@ -175,10 +186,10 @@ a {
 
 @keyframes marquee-right {
   from {
-    transform: translateX(-50%);
+    transform: translate3d(calc(-50% - (var(--marquee-gap) / 2)), 0, 0);
   }
   to {
-    transform: translateX(0%);
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -205,8 +216,20 @@ a {
 }
 
 .marquee-right-track {
+  --marquee-gap: 1.25rem;
+  display: flex;
+  width: max-content;
+  gap: var(--marquee-gap);
   animation: marquee-right 24s linear infinite;
   will-change: transform;
+  backface-visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-right-track {
+    animation: none;
+    transform: none;
+  }
 }
 
 .hero-bliss-word {

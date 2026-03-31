@@ -8,16 +8,6 @@ import { api } from "@/lib/api";
 
 const FALLBACK_IMAGE = "/brand/logo-bg.png";
 
-function PrimaryHero({
-  title,
-  subtitle,
-  imageSrc,
-}: {
-  title: string;
-  subtitle: string;
-  imageSrc: string;
-}) {}
-
 export default async function ShopPage({
   searchParams,
 }: {
@@ -34,7 +24,6 @@ export default async function ShopPage({
 
   const products = productsResult.status === "fulfilled" ? productsResult.value.data : [];
   const categories = categoriesResult.status === "fulfilled" ? categoriesResult.value : [];
-  const heroImage = products[0]?.images?.[0] || FALLBACK_IMAGE;
 
   return (
     <div className="overflow-x-hidden bg-rose-paper">
@@ -78,11 +67,11 @@ export default async function ShopPage({
                   />
                 </div>
                 <div className="p-4">
-                  <h3 className="font-display text-[1.65rem] leading-tight text-rose-ink">{product.name}</h3>
+                  <h3 className="font-display text-2xl leading-tight text-rose-ink sm:text-[1.65rem]">{product.name}</h3>
                   <p className="mt-1 text-sm text-rose-muted">
                     {product.description || "Beautifully handcrafted and ready to gift."}
                   </p>
-                  <div className="mt-3 flex items-center justify-between gap-2">
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-medium text-rose-ink">Rs. {product.price.toFixed(2)}</p>
                     <LoadingLink href={`/shop/${encodeURIComponent(product.slug)}`} className="btn-ghost">
                       View details

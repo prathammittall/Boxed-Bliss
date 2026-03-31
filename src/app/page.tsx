@@ -1,4 +1,5 @@
 import Footer from "@/components/Footer";
+import HomeCartDrawer from "@/components/HomeCartDrawer";
 import Navbar from "@/components/Navbar";
 import LoadingLink from "@/components/routeLoading/LoadingLink";
 import HomeMovingCarousel from "@/components/HomeMovingCarousel";
@@ -82,10 +83,10 @@ export default async function Home() {
         <section className="grid min-h-[calc(100svh-6rem)] items-center gap-9 lg:grid-cols-[1fr_0.96fr]">
           <div className="max-w-[560px]">
             <p className="kicker">Handmade with love and detail</p>
-            <h1 className="mt-5 max-w-[18ch] font-display text-5xl leading-[0.96] text-rose-ink sm:text-7xl">
+            <h1 className="mt-5 max-w-[18ch] font-display text-4xl leading-[0.96] text-rose-ink sm:text-6xl lg:text-7xl">
               Handcrafted Joy,
             </h1>
-            <p className="font-script mt-2 text-7xl leading-none text-rose-accent sm:text-8xl lg:text-[6.7rem]">
+            <p className="font-script mt-2 text-5xl leading-none text-rose-accent sm:text-7xl lg:text-[6.7rem]">
               <span>Boxed with </span>
               <span className="hero-bliss-word">Bliss</span>
             </p>
@@ -134,7 +135,7 @@ export default async function Home() {
                   />
                 </div>
                 <div className="p-4">
-                  <h3 className="font-display text-[1.95rem] leading-tight text-rose-ink">{card.name}</h3>
+                  <h3 className="font-display text-3xl leading-tight text-rose-ink sm:text-[1.95rem]">{card.name}</h3>
                   <p className="mt-1 text-sm text-rose-muted">
                     {card.description || "Thoughtful details, handcrafted with care."}
                   </p>
@@ -167,7 +168,7 @@ export default async function Home() {
                   />
                 </div>
                 <div className="p-4">
-                  <h3 className="font-display text-[1.7rem] leading-tight text-rose-ink">{card.name}</h3>
+                  <h3 className="font-display text-2xl leading-tight text-rose-ink sm:text-[1.7rem]">{card.name}</h3>
                   <p className="mt-1 text-sm text-rose-muted">
                     {card.description || "Premium gift styling for your celebration."}
                   </p>
@@ -325,6 +326,7 @@ export default async function Home() {
         ) : null}
       </main>
 
+      <HomeCartDrawer />
       <Footer />
     </div>
   );

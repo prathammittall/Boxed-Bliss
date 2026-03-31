@@ -17,101 +17,42 @@ import {
 } from "@/lib/cart";
 
 const FALLBACK_IMAGE = "/brand/logo-bg.png";
-const ORDER_FORMSPREE_ENDPOINT = (process.env.NEXT_PUBLIC_FORMSPREE_ORDER_ENDPOINT ?? "").trim();
-const UPI_ID = (process.env.NEXT_PUBLIC_UPI_ID ?? "").trim();
-const UPI_NAME = (process.env.NEXT_PUBLIC_UPI_NAME ?? "Boxed Bliss").trim();
-const UPI_QR_IMAGE = (process.env.NEXT_PUBLIC_UPI_QR_IMAGE ?? "").trim();
 
-function formatOrderItemsForEmail(items: Array<{ productName: string; quantity: number; price: number; variantInfo?: string | null }>) {
-  return items
-    .map((item, index) => {
-      const lineTotal = Number(item.price) * Number(item.quantity);
-      return [
-        `${index + 1}. ${item.productName}`,
-        `   Quantity: ${item.quantity}`,
-        `   Unit Price: ${item.price}`,
-        `   Line Total: ${lineTotal.toFixed(2)}`,
-        `   Variant: ${item.variantInfo ?? "N/A"}`,
-      ].join("\n");
-    })
-    .join("\n\n");
-}
+type RazorpaySuccessResponse = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
 
-async function notifyOrderOnFormspree(order: {
-  id: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone?: string | null;
-  shippingAddress: string;
-  city: string;
-  state?: string | null;
-  pincode: string;
-  subtotal: number;
-  discount: number;
-  total: number;
-  couponCode?: string | null;
-  status: string;
-  notes?: string | null;
-  items: Array<{ productName: string; quantity: number; price: number; variantInfo?: string | null; image?: string | null }>;
-}) {
-  if (!ORDER_FORMSPREE_ENDPOINT) return;
-
-  const message = [
-    `Order ID: ${order.id}`,
-    `Customer Name: ${order.customerName}`,
-    `Customer Email: ${order.customerEmail}`,
-    `Customer Phone: ${order.customerPhone ?? "N/A"}`,
-    `Address: ${order.shippingAddress}, ${order.city}${order.state ? `, ${order.state}` : ""} - ${order.pincode}`,
-    `Subtotal: ${order.subtotal}`,
-    `Discount: ${order.discount}`,
-    `Total: ${order.total}`,
-    `Coupon: ${order.couponCode ?? "N/A"}`,
-    `Status: ${order.status}`,
-    `Notes: ${order.notes ?? "N/A"}`,
-    "",
-    "Items:",
-    formatOrderItemsForEmail(order.items),
-  ].join("\n");
-
-  const payload = {
-    _subject: `New Boxed Bliss Order #${order.id}`,
-    orderId: order.id,
-    customerName: order.customerName,
-    customerEmail: order.customerEmail,
-    customerPhone: order.customerPhone ?? "",
-    shippingAddress: order.shippingAddress,
-    city: order.city,
-    state: order.state ?? "",
-    pincode: order.pincode,
-    subtotal: order.subtotal,
-    discount: order.discount,
-    total: order.total,
-    couponCode: order.couponCode ?? "",
-    orderStatus: order.status,
-    notes: order.notes ?? "",
-    items: order.items.map((item) => ({
-      productName: item.productName,
-      quantity: item.quantity,
-      price: item.price,
-      lineTotal: Number(item.price) * Number(item.quantity),
-      variantInfo: item.variantInfo ?? null,
-      image: item.image ?? null,
-    })),
-    message,
+type RazorpayCheckoutOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description?: string;
+  order_id: string;
+  prefill?: {
+    name?: string;
+    email?: string;
+    contact?: string;
   };
+  theme?: {
+    color?: string;
+  };
+  modal?: {
+    ondismiss?: () => void;
+  };
+  handler: (response: RazorpaySuccessResponse) => void;
+};
 
-  const response = await fetch(ORDER_FORMSPREE_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+type RazorpayCheckoutInstance = {
+  open: () => void;
+  on: (eventName: string, callback: () => void) => void;
+};
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Formspree order notification failed (${response.status}): ${body}`);
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayCheckoutOptions) => RazorpayCheckoutInstance;
   }
 }
 
@@ -129,11 +70,7 @@ function CheckoutContent() {
   const [error, setError] = useState("");
   const [orderId, setOrderId] = useState("");
   const [orderTrackingEmail, setOrderTrackingEmail] = useState("");
-  const [paymentScreenshotFile, setPaymentScreenshotFile] = useState<File | null>(null);
-  const [paymentProofUrl, setPaymentProofUrl] = useState("");
-  const [paymentProofPublicId, setPaymentProofPublicId] = useState("");
-  const [paymentUploadState, setPaymentUploadState] = useState<"idle" | "uploading" | "uploaded" | "error">("idle");
-  const [paymentUploadMessage, setPaymentUploadMessage] = useState("");
+  const [razorpayReady, setRazorpayReady] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -180,29 +117,42 @@ function CheckoutContent() {
     };
   }, [isCartMode, productSlug]);
 
+  useEffect(() => {
+    let active = true;
+
+    if (typeof window === "undefined") return;
+    if (window.Razorpay) {
+      setRazorpayReady(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+
+    script.onload = () => {
+      if (!active) return;
+      setRazorpayReady(true);
+    };
+
+    script.onerror = () => {
+      if (!active) return;
+      setRazorpayReady(false);
+      setError("Payment gateway failed to load. Please refresh and try again.");
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const subtotal = useMemo(
     () => checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [checkoutItems]
   );
   const total = useMemo(() => Math.max(0, subtotal - discount), [subtotal, discount]);
-
-  const upiIntentUrl = useMemo(() => {
-    if (!UPI_ID) return "";
-    const params = new URLSearchParams({
-      pa: UPI_ID,
-      pn: UPI_NAME,
-      tn: "Boxed Bliss Order Payment",
-      cu: "INR",
-      am: total.toFixed(2),
-    });
-    return `upi://pay?${params.toString()}`;
-  }, [total]);
-
-  const upiQrCodeUrl = useMemo(() => {
-    if (UPI_QR_IMAGE) return UPI_QR_IMAGE;
-    if (!upiIntentUrl) return "";
-    return `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(upiIntentUrl)}`;
-  }, [upiIntentUrl]);
 
   function handleQuantityChange(itemKey: string, quantity: number) {
     const nextQuantity = Math.max(1, Number(quantity) || 1);
@@ -251,40 +201,15 @@ function CheckoutContent() {
     }
   }
 
-  function handlePaymentScreenshotChange(file: File | null) {
-    setPaymentScreenshotFile(file);
-    setPaymentProofUrl("");
-    setPaymentProofPublicId("");
-    setPaymentUploadState("idle");
-    setPaymentUploadMessage(file ? "Screenshot selected. It will be uploaded before placing the order." : "");
-  }
-
-  async function uploadPaymentProofIfNeeded() {
-    if (paymentProofUrl && paymentProofPublicId) {
-      return { paymentProofUrl, paymentProofPublicId };
-    }
-
-    if (!paymentScreenshotFile) {
-      throw new Error("Please upload your UPI payment screenshot before placing the order.");
-    }
-
-    setPaymentUploadState("uploading");
-    setPaymentUploadMessage("Uploading payment screenshot...");
-
-    const formData = new FormData();
-    formData.append("image", paymentScreenshotFile);
-
-    const upload = await api.uploadPaymentProof(formData);
-    setPaymentProofUrl(upload.url);
-    setPaymentProofPublicId(upload.publicId);
-    setPaymentUploadState("uploaded");
-    setPaymentUploadMessage("Payment screenshot uploaded successfully.");
-
-    return { paymentProofUrl: upload.url, paymentProofPublicId: upload.publicId };
-  }
-
   async function handlePlaceOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!window.Razorpay || !razorpayReady) {
+      setSubmitState("error");
+      setError("Payment gateway is not ready yet. Please try again in a few seconds.");
+      return;
+    }
+
     if (checkoutItems.length === 0) {
       setSubmitState("error");
       setError("Your cart is empty.");
@@ -313,9 +238,7 @@ function CheckoutContent() {
     setError("");
 
     try {
-      const paymentProof = await uploadPaymentProofIfNeeded();
-
-      const order = await api.createOrder({
+      const session = await api.createRazorpayOrder({
         customerName,
         customerEmail,
         customerPhone: customerPhone || undefined,
@@ -323,9 +246,6 @@ function CheckoutContent() {
         city,
         state: state || undefined,
         pincode,
-        paymentMethod: "UPI",
-        paymentProofUrl: paymentProof.paymentProofUrl,
-        paymentProofPublicId: paymentProof.paymentProofPublicId,
         couponCode: discount > 0 ? couponCode.trim().toUpperCase() : undefined,
         notes: notes || undefined,
         items: checkoutItems.map((item) => ({
@@ -335,35 +255,67 @@ function CheckoutContent() {
         })),
       });
 
-      setOrderId(order.id);
-      setOrderTrackingEmail(customerEmail);
+      const razorpay = new window.Razorpay({
+        key: session.keyId,
+        amount: session.amount,
+        currency: session.currency,
+        name: session.name,
+        description: session.description,
+        order_id: session.orderId,
+        prefill: {
+          name: customerName,
+          email: customerEmail,
+          contact: customerPhone || undefined,
+        },
+        theme: { color: "#b77693" },
+        modal: {
+          ondismiss: () => {
+            setSubmitState("idle");
+          },
+        },
+        handler: async (response) => {
+          setSubmitState("submitting");
+          setError("");
 
-      try {
-        await notifyOrderOnFormspree(order);
-      } catch (notifyError) {
-        // Checkout success should not be blocked by notification delivery failures.
-        console.error("Frontend Formspree order notification failed:", notifyError);
-      }
+          try {
+            const order = await api.verifyRazorpayPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
 
-      setSubmitState("success");
-      form.reset();
-      setCouponCode("");
-      setDiscount(0);
-      setCouponMessage("");
-      setPaymentScreenshotFile(null);
-      setPaymentProofUrl("");
-      setPaymentProofPublicId("");
-      setPaymentUploadState("idle");
-      setPaymentUploadMessage("");
-      if (isCartMode) {
-        clearCartItems();
-        setCheckoutItems([]);
-      } else {
-        setCheckoutItems((prev) => prev.map((item) => ({ ...item, quantity: 1 })));
-      }
+            setOrderId(order.id);
+            setOrderTrackingEmail(customerEmail);
+            setSubmitState("success");
+
+            form.reset();
+            setCouponCode("");
+            setDiscount(0);
+            setCouponMessage("");
+
+            if (isCartMode) {
+              clearCartItems();
+              setCheckoutItems([]);
+            } else {
+              setCheckoutItems((prev) => prev.map((item) => ({ ...item, quantity: 1 })));
+            }
+          } catch (err) {
+            setSubmitState("error");
+            setError(err instanceof ApiError ? err.message : "Payment verification failed. Please contact support.");
+          }
+        },
+      });
+
+      razorpay.on("payment.failed", () => {
+        setSubmitState("error");
+        setError("Payment was not completed. Please try again.");
+      });
+
+      razorpay.open();
+      setSubmitState("idle");
     } catch (err) {
       setSubmitState("error");
-      setError(err instanceof ApiError ? err.message : "Could not place order.");
+      setError(err instanceof ApiError ? err.message : "Could not initiate payment.");
     }
   }
 
@@ -399,7 +351,7 @@ function CheckoutContent() {
                     const itemKey = getCartItemKey(item);
                     return (
                       <div key={itemKey} className="rounded-xl border border-rose-line/80 bg-white/60 p-3">
-                        <div className="flex gap-3">
+                        <div className="flex flex-col gap-3 sm:flex-row">
                           <div className="relative h-24 w-24 overflow-hidden rounded-xl border border-white/70 bg-rose-soft">
                             <Image
                               src={item.image || FALLBACK_IMAGE}
@@ -415,7 +367,7 @@ function CheckoutContent() {
                             {item.variantInfo ? (
                               <p className="mt-1 text-xs text-rose-muted">Variant: {item.variantInfo}</p>
                             ) : null}
-                            <div className="mt-3 flex items-center gap-2">
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
                               <label htmlFor={`qty-${itemKey}`} className="text-xs text-rose-muted">
                                 Qty
                               </label>
@@ -450,7 +402,7 @@ function CheckoutContent() {
                   <p className="font-medium text-rose-ink">Total: Rs. {total.toFixed(2)}</p>
                 </div>
 
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                   <input
                     value={couponCode}
                     onChange={(event) => setCouponCode(event.target.value)}
@@ -470,52 +422,13 @@ function CheckoutContent() {
             <h2 className="font-display text-3xl text-rose-ink">Delivery details</h2>
             <form className="mt-4 grid gap-3" onSubmit={handlePlaceOrder}>
               <div className="rounded-xl border border-rose-line/80 bg-white/65 p-4">
-                <p className="text-sm font-medium text-rose-ink">Pay Online via UPI</p>
+                <p className="text-sm font-medium text-rose-ink">Pay securely with Razorpay</p>
                 <p className="mt-1 text-xs leading-5 text-rose-muted">
-                  Scan the QR code and complete payment of Rs. {total.toFixed(2)} before placing your order.
+                  You will be redirected to Razorpay Checkout to pay Rs. {total.toFixed(2)} safely using UPI, cards, netbanking, or wallet.
                 </p>
-                <p className="mt-1 text-xs text-rose-muted">UPI ID: {UPI_ID || "Please configure NEXT_PUBLIC_UPI_ID"}</p>
-
-                {upiQrCodeUrl ? (
-                  <div className="mt-3 overflow-hidden rounded-xl border border-rose-line/80 bg-white p-2">
-                    <img
-                      src={upiQrCodeUrl}
-                      alt="UPI QR code"
-                      className="mx-auto h-64 w-64 rounded-lg object-contain sm:h-72 sm:w-72"
-                    />
-                  </div>
-                ) : (
-                  <p className="mt-3 rounded-lg border border-rose-line/80 bg-white/70 p-3 text-xs text-rose-muted">
-                    QR code is unavailable. Set NEXT_PUBLIC_UPI_ID or NEXT_PUBLIC_UPI_QR_IMAGE in frontend env.
-                  </p>
-                )}
-
-                {upiIntentUrl ? (
-                  <a href={upiIntentUrl} className="mt-3 inline-flex text-xs text-rose-ink underline">
-                    Open UPI app on this device
-                  </a>
+                {!razorpayReady ? (
+                  <p className="mt-2 text-xs text-rose-muted">Loading payment gateway...</p>
                 ) : null}
-
-                <div className="mt-4">
-                  <label htmlFor="paymentScreenshot" className="text-xs text-rose-muted">
-                    Upload payment confirmation screenshot *
-                  </label>
-                  <input
-                    id="paymentScreenshot"
-                    name="paymentScreenshot"
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    required
-                    onChange={(event) => handlePaymentScreenshotChange(event.target.files?.[0] ?? null)}
-                    className="mt-2 w-full rounded-xl border border-rose-line/80 bg-white/70 px-3 py-2 text-sm outline-none"
-                  />
-                  {paymentUploadMessage ? (
-                    <p className="mt-2 text-xs text-rose-muted">{paymentUploadMessage}</p>
-                  ) : null}
-                  {paymentUploadState === "uploading" ? (
-                    <p className="mt-1 text-xs text-rose-muted">Uploading to secure storage...</p>
-                  ) : null}
-                </div>
               </div>
 
               <input name="customerName" placeholder="Full name *" required className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
@@ -529,17 +442,17 @@ function CheckoutContent() {
               <input name="pincode" placeholder="Pincode *" required className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
               <textarea name="notes" placeholder="Notes (optional)" rows={3} className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none" />
 
-              <div className="mt-2 flex items-center gap-3">
+              <div className="mt-2 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={checkoutItems.length === 0 || submitState === "submitting"}
+                  disabled={checkoutItems.length === 0 || submitState === "submitting" || !razorpayReady}
                 >
-                  {submitState === "submitting" ? "Placing order..." : "Place order"}
+                  {submitState === "submitting" ? "Processing..." : "Pay with Razorpay"}
                 </button>
                 {submitState === "success" ? (
                   <div className="text-sm text-rose-ink">
-                    <p>Order placed successfully. ID: {orderId}. We have received your request details.</p>
+                    <p>Payment successful. Order confirmed with ID: {orderId}.</p>
                     <LoadingLink
                       href={`/order-status?orderId=${encodeURIComponent(orderId)}&email=${encodeURIComponent(orderTrackingEmail)}`}
                       className="mt-2 inline-flex text-rose-muted underline hover:text-rose-ink"
@@ -549,7 +462,7 @@ function CheckoutContent() {
                   </div>
                 ) : null}
                 {submitState === "error" ? (
-                  <p className="text-sm text-rose-muted">{error || "Order placement failed."}</p>
+                  <p className="text-sm text-rose-muted">{error || "Checkout failed."}</p>
                 ) : null}
               </div>
             </form>

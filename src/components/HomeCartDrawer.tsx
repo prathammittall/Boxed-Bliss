@@ -2,10 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import LoadingLink from "@/components/routeLoading/LoadingLink";
 import {
+  CART_DRAWER_OPEN_EVENT,
   CART_UPDATED_EVENT,
   clearCartItems,
   getCartItemKey,
@@ -17,7 +16,8 @@ import {
 
 const FALLBACK_IMAGE = "/brand/logo-bg.png";
 
-export default function CartPage() {
+export default function HomeCartDrawer() {
+  const [open, setOpen] = useState(false);
   const [items, setItems] = useState<CartItem[]>([]);
 
   useEffect(() => {
@@ -25,13 +25,36 @@ export default function CartPage() {
       setItems(getCartItems());
     }
 
+    function handleOpen() {
+      refreshCart();
+      setOpen(true);
+    }
+
     refreshCart();
     window.addEventListener(CART_UPDATED_EVENT, refreshCart);
+    window.addEventListener(CART_DRAWER_OPEN_EVENT, handleOpen);
 
     return () => {
       window.removeEventListener(CART_UPDATED_EVENT, refreshCart);
+      window.removeEventListener(CART_DRAWER_OPEN_EVENT, handleOpen);
     };
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
+  const itemCount = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items]
+  );
 
   const subtotal = useMemo(
     () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -55,37 +78,72 @@ export default function CartPage() {
   }
 
   return (
-    <div className="overflow-x-hidden bg-rose-paper">
-      <Navbar />
-      <main className="site-shell pb-16 pt-16 sm:pt-16">
-        <section className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <article className="soft-panel p-5 sm:p-6">
-            <p className="kicker">Cart</p>
-            <h1 className="mt-2 font-display text-4xl text-rose-ink">Your cart</h1>
+    <>
+      <div
+        aria-hidden={!open}
+        className={`fixed inset-0 z-55 bg-rose-ink/40 transition-opacity duration-300 ${
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={() => setOpen(false)}
+      />
 
+      <aside
+        aria-label="Cart drawer"
+        aria-hidden={!open}
+        className={`fixed right-0 top-0 z-60 h-svh w-full max-w-full border-l border-rose-line/80 bg-rose-paper shadow-2xl transition-transform duration-300 md:w-[60%] lg:w-[40%] ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex h-16 items-center justify-between border-b border-rose-line/80 px-4 sm:px-5">
+          <div>
+            <p className="kicker">Cart</p>
+            <p className="text-sm text-rose-muted">{itemCount} item(s)</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-line/85 bg-white/70 text-rose-muted transition hover:text-rose-ink"
+            aria-label="Close cart drawer"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+              <path
+                d="M6 6l12 12M18 6 6 18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex h-[calc(100svh-4rem)] flex-col">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5">
             {items.length === 0 ? (
-              <div className="mt-4 rounded-xl border border-rose-line/80 bg-white/65 p-4 text-sm text-rose-muted">
+              <div className="rounded-xl border border-rose-line/80 bg-white/65 p-4 text-sm text-rose-muted">
                 Your cart is empty.
                 <div className="mt-3">
-                  <LoadingLink href="/shop" className="btn-ghost">
+                  <LoadingLink href="/shop" className="btn-ghost" onClick={() => setOpen(false)}>
                     Continue shopping
                   </LoadingLink>
                 </div>
               </div>
             ) : (
-              <div className="mt-4 grid gap-3">
+              <div className="grid gap-3">
                 {items.map((item) => {
                   const itemKey = getCartItemKey(item);
+
                   return (
-                    <div key={itemKey} className="rounded-xl border border-rose-line/80 bg-white/65 p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row">
-                        <div className="relative h-24 w-24 overflow-hidden rounded-xl border border-white/70 bg-rose-soft">
+                    <div key={itemKey} className="rounded-xl border border-rose-line/80 bg-white/65 p-3">
+                      <div className="flex gap-3">
+                        <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-white/70 bg-rose-soft">
                           <Image
                             src={item.image || FALLBACK_IMAGE}
                             alt={item.name}
                             fill
                             className="object-cover"
-                            sizes="96px"
+                            sizes="80px"
                           />
                         </div>
 
@@ -96,17 +154,17 @@ export default function CartPage() {
                             <p className="mt-1 text-xs text-rose-muted">Variant: {item.variantInfo}</p>
                           ) : null}
 
-                          <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <label htmlFor={`qty-${itemKey}`} className="text-xs text-rose-muted">
+                          <div className="mt-2 flex items-center gap-2">
+                            <label htmlFor={`drawer-qty-${itemKey}`} className="text-xs text-rose-muted">
                               Qty
                             </label>
                             <input
-                              id={`qty-${itemKey}`}
+                              id={`drawer-qty-${itemKey}`}
                               type="number"
                               min={1}
                               value={item.quantity}
                               onChange={(event) => handleQtyChange(itemKey, Number(event.target.value))}
-                              className="w-20 rounded-lg border border-rose-line/80 bg-white px-3 py-2 text-sm outline-none"
+                              className="w-16 rounded-lg border border-rose-line/80 bg-white px-2 py-1.5 text-sm outline-none"
                             />
                             <button
                               type="button"
@@ -123,20 +181,20 @@ export default function CartPage() {
                 })}
               </div>
             )}
-          </article>
+          </div>
 
-          <article className="soft-panel h-fit p-5 sm:p-6">
-            <h2 className="font-display text-3xl text-rose-ink">Summary</h2>
-            <div className="mt-4 grid gap-2 rounded-xl border border-rose-line/80 bg-white/65 p-3 text-sm text-rose-muted">
-              <p>Items: {items.reduce((sum, item) => sum + item.quantity, 0)}</p>
+          <div className="border-t border-rose-line/80 p-4 sm:p-5">
+            <div className="rounded-xl border border-rose-line/80 bg-white/65 p-3 text-sm text-rose-muted">
+              <p>Items: {itemCount}</p>
               <p className="font-medium text-rose-ink">Subtotal: Rs. {subtotal.toFixed(2)}</p>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-3 flex flex-wrap gap-2">
               <LoadingLink
                 href={items.length === 0 ? "/cart" : "/checkout"}
                 className={`btn-primary ${items.length === 0 ? "pointer-events-none opacity-60" : ""}`}
                 aria-disabled={items.length === 0}
+                onClick={() => setOpen(false)}
               >
                 Proceed to checkout
               </LoadingLink>
@@ -144,10 +202,9 @@ export default function CartPage() {
                 Clear cart
               </button>
             </div>
-          </article>
-        </section>
-      </main>
-      <Footer />
-    </div>
+          </div>
+        </div>
+      </aside>
+    </>
   );
 }

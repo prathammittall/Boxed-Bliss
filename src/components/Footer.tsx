@@ -22,7 +22,7 @@ const footerGroups = [
 export default function Footer() {
   return (
     <footer className="mt-24 border-t border-rose-line/80 pb-10 pt-12">
-      <div className="site-shell grid gap-8 text-[0.66rem] uppercase tracking-[0.17em] text-rose-muted sm:grid-cols-[1.2fr_1fr_1fr]">
+      <div className="site-shell grid gap-8 text-[0.66rem] uppercase tracking-[0.17em] text-rose-muted sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr]">
         <div>
           <div className="flex items-center gap-3">
             <Image

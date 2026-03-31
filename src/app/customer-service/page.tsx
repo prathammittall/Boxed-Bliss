@@ -41,7 +41,7 @@ export default async function CustomerServicePage() {
                 </div>
               </div>
 
-              <div className="relative overflow-hidden rounded-[1rem] border border-white/70 bg-rose-soft min-h-[320px]">
+              <div className="relative min-h-[320px] overflow-hidden rounded-[1rem] border border-white/70 bg-rose-soft">
                 <Image
                   src={heroImage}
                   alt="Customer service inspiration"

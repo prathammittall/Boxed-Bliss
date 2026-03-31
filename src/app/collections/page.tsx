@@ -50,7 +50,7 @@ function BigTile({
 
       <div className="border-t border-rose-line/70 bg-white/70 p-5 sm:p-6">
         <p className="kicker">Collection</p>
-        <h3 className="mt-2 font-display text-[2rem] leading-tight text-rose-ink">{title}</h3>
+        <h3 className="mt-2 font-display text-3xl leading-tight text-rose-ink sm:text-[2rem]">{title}</h3>
         <p className="mt-3 max-w-[42ch] text-sm leading-6 text-rose-muted">{subtitle}</p>
 
         <div className="mt-5 flex flex-wrap gap-3">
@@ -116,7 +116,7 @@ export default async function CollectionsPage() {
                   feels like it belongs on a modern luxury storefront.
                 </p>
               </div>
-              <div className="relative overflow-hidden rounded-[1rem] border border-rose-line/70 bg-white/60 min-h-[260px]">
+              <div className="relative min-h-[260px] overflow-hidden rounded-[1rem] border border-rose-line/70 bg-white/60">
                 <Image
                   src={featuredProducts[0]?.images?.[0] || FALLBACK_IMAGE}
                   alt={featuredProducts[0]?.name || "Featured collection"}

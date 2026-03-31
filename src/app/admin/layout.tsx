@@ -74,7 +74,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-svh bg-rose-paper">
       <div className="site-shell grid gap-5 py-6 lg:grid-cols-[250px_1fr]">
-        <aside className="soft-panel h-fit p-4">
+        <aside className="soft-panel h-fit p-4 lg:sticky lg:top-20">
           <div className="mb-4 border-b border-rose-line/80 pb-4">
             <p className="kicker">Admin</p>
             <h1 className="font-display text-3xl text-rose-ink">Boxed Bliss</h1>
@@ -105,7 +105,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
         </aside>
 
-        <main>{children}</main>
+        <main className="min-w-0">{children}</main>
       </div>
     </div>
   );

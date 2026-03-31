@@ -159,6 +159,20 @@ export type Order = {
   createdAt: string;
 };
 
+export type RazorpayOrderSession = {
+  keyId: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  prefill?: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
+};
+
 export type Analytics = {
   products: { total: number; featured: number };
   categories: { total: number };
@@ -408,6 +422,35 @@ export const api = {
       await request<ApiEnvelope<Order>>("/api/orders", {
         method: "POST",
         body: JSON.stringify({ ...payload, clientContext: payload.clientContext ?? getClientContext() }),
+      })
+    ),
+  createRazorpayOrder: async (payload: {
+    customerName: string;
+    customerEmail: string;
+    customerPhone?: string;
+    shippingAddress: string;
+    city: string;
+    state?: string;
+    pincode: string;
+    couponCode?: string;
+    notes?: string;
+    items: Array<{ productId: string; quantity: number; variantInfo?: string }>;
+  }) =>
+    extractEnvelopeData(
+      await request<ApiEnvelope<RazorpayOrderSession>>("/api/orders/razorpay/create-order", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      })
+    ),
+  verifyRazorpayPayment: async (payload: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }) =>
+    extractEnvelopeData(
+      await request<ApiEnvelope<Order>>("/api/orders/razorpay/verify", {
+        method: "POST",
+        body: JSON.stringify(payload),
       })
     ),
   updateOrder: async (id: string, payload: { status?: string; notes?: string }) =>

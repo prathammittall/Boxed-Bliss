@@ -86,7 +86,7 @@ export default function AdminOrdersPage() {
 
                 return (
                 <div key={order.id} className="rounded-xl border border-rose-line/80 bg-white/65 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-medium text-rose-ink">
                         Order #{order.id.slice(-8).toUpperCase()} • {order.customerName}
@@ -99,7 +99,7 @@ export default function AdminOrdersPage() {
                     <select
                       value={order.status}
                       onChange={(event) => handleStatusChange(order.id, event.target.value)}
-                      className="rounded-lg border border-rose-line/80 bg-white px-3 py-2 text-xs text-rose-ink outline-none"
+                      className="w-full rounded-lg border border-rose-line/80 bg-white px-3 py-2 text-xs text-rose-ink outline-none sm:w-auto"
                     >
                       {STATUS_OPTIONS.map((status) => (
                         <option key={status} value={status}>

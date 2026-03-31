@@ -50,15 +50,15 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               </div>
             </article>
 
-            <article className="soft-panel p-6 sm:p-8">
+            <article className="soft-panel p-5 sm:p-8">
               <p className="kicker">Product</p>
-              <h1 className="mt-2 font-display text-5xl leading-tight text-rose-ink">{product.name}</h1>
+              <h1 className="mt-2 font-display text-4xl leading-tight text-rose-ink sm:text-5xl">{product.name}</h1>
               <p className="mt-3 text-sm leading-7 text-rose-muted">
                 {product.description || "Beautifully handcrafted and ready for meaningful gifting."}
               </p>
 
-              <div className="mt-5 flex items-end gap-3">
-                <p className="font-display text-4xl text-rose-ink">Rs. {product.price.toFixed(2)}</p>
+              <div className="mt-5 flex flex-wrap items-end gap-2 sm:gap-3">
+                <p className="font-display text-3xl text-rose-ink sm:text-4xl">Rs. {product.price.toFixed(2)}</p>
                 {product.comparePrice ? (
                   <p className="text-sm text-rose-muted line-through">Rs. {product.comparePrice.toFixed(2)}</p>
                 ) : null}

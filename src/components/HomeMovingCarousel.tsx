@@ -15,11 +15,11 @@ export default function HomeMovingCarousel({ items }: { items: MarqueeItem[] }) 
 
   return (
     <section className="mt-16 overflow-hidden">
-      <div className="marquee-right-track flex w-max gap-5">
+      <div className="marquee-right-track">
         {loopItems.map((item, index) => (
           <article
             key={`${item.title}-${index}`}
-            className="soft-panel w-[320px] shrink-0 overflow-hidden sm:w-[360px]"
+            className="soft-panel w-[280px] shrink-0 overflow-hidden sm:w-[320px] md:w-[360px]"
           >
             <div className="relative min-h-[200px]">
               <Image

@@ -329,7 +329,7 @@ export default function AdminProductsPage() {
               placeholder="Description (optional)"
               className="md:col-span-2 rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none"
             />
-            <div className="flex gap-2 md:col-span-2">
+            <div className="flex flex-wrap gap-2 md:col-span-2">
               <button type="submit" className="btn-primary" disabled={submitting}>
                 {submitting ? "Saving..." : "Save changes"}
               </button>
@@ -364,7 +364,7 @@ export default function AdminProductsPage() {
                       {product.occasion ? "Occasion" : "No occasion"} • {product.moreToExplore ? "More to explore" : "Not in more to explore"}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button type="button" className="btn-ghost" onClick={() => startEdit(product)}>
                       Edit
                     </button>

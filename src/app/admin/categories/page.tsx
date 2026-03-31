@@ -201,7 +201,7 @@ export default function AdminCategoriesPage() {
               placeholder="Description (optional)"
               className="rounded-xl border border-rose-line/80 bg-white/70 px-4 py-3 text-sm outline-none md:col-span-2"
             />
-            <div className="flex gap-2 md:col-span-2">
+            <div className="flex flex-wrap gap-2 md:col-span-2">
               <button type="submit" className="btn-primary" disabled={submitting}>
                 {submitting ? "Saving..." : "Save changes"}
               </button>
@@ -233,12 +233,12 @@ export default function AdminCategoriesPage() {
                         <div className="flex h-full w-full items-center justify-center text-[10px] text-rose-muted">No image</div>
                       )}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                     <p className="text-sm font-medium text-rose-ink">{category.name}</p>
-                    <p className="text-xs text-rose-muted">{category.slug}</p>
+                    <p className="break-all text-xs text-rose-muted">{category.slug}</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button type="button" className="btn-ghost" onClick={() => startEdit(category)}>
                       Edit
                     </button>

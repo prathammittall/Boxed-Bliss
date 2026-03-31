@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import LoadingLink from "@/components/routeLoading/LoadingLink";
-import { CART_UPDATED_EVENT, getCartItems } from "@/lib/cart";
+import { CART_DRAWER_OPEN_EVENT, CART_UPDATED_EVENT, getCartItems } from "@/lib/cart";
 
 const links = [
   { label: "Home", href: "/" },
@@ -18,6 +18,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const isHome = pathname === "/";
 
   const activeHref = useMemo(() => pathname ?? "/", [pathname]);
 
@@ -37,8 +38,8 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-rose-line/80 bg-rose-paper/95 backdrop-blur-xl">
-      <div className="site-shell grid h-16 grid-cols-[auto_1fr_auto] items-center gap-3">
-        <LoadingLink href="/" className="flex items-center gap-2" aria-label="Home">
+      <div className="site-shell grid h-16 grid-cols-[1fr_auto] items-center gap-2 md:grid-cols-[auto_1fr_auto] md:gap-3">
+        <LoadingLink href="/" className="flex min-w-0 items-center gap-2" aria-label="Home">
           <Image
             src="/brand/logo-bg.png"
             alt="The Boxed Bliss logo"
@@ -47,7 +48,7 @@ export default function Navbar() {
             className="h-10 w-10 rounded-full border border-rose-line object-cover shadow-sm"
             priority
           />
-          <span className="font-script text-[1.75rem] leading-none text-rose-ink sm:text-[2rem]">
+          <span className="truncate font-script text-[1.3rem] leading-none text-rose-ink sm:text-[1.75rem] md:text-[2rem]">
             Boxed with Bliss
           </span>
         </LoadingLink>
@@ -75,7 +76,7 @@ export default function Navbar() {
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             aria-label="Search"
@@ -105,27 +106,52 @@ export default function Navbar() {
             </svg>
           </LoadingLink>
 
-          <LoadingLink
-            href="/cart"
-            aria-label="Cart"
-            className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-line/85 bg-white/75 text-rose-muted transition hover:border-rose-accent/50 hover:text-rose-ink"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
-              <path
-                d="M6 8h12l-1.2 10.2a1.6 1.6 0 0 1-1.6 1.4H8.8a1.6 1.6 0 0 1-1.6-1.4L6 8Zm3-2.2a3 3 0 0 1 6 0V8H9V5.8Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            {cartCount > 0 ? (
-              <span className="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-rose-ink px-1 text-[10px] font-medium leading-none text-rose-paper">
-                {cartCount > 99 ? "99+" : cartCount}
-              </span>
-            ) : null}
-          </LoadingLink>
+          {isHome ? (
+            <button
+              type="button"
+              aria-label="Cart"
+              onClick={() => window.dispatchEvent(new Event(CART_DRAWER_OPEN_EVENT))}
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-line/85 bg-white/75 text-rose-muted transition hover:border-rose-accent/50 hover:text-rose-ink"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+                <path
+                  d="M6 8h12l-1.2 10.2a1.6 1.6 0 0 1-1.6 1.4H8.8a1.6 1.6 0 0 1-1.6-1.4L6 8Zm3-2.2a3 3 0 0 1 6 0V8H9V5.8Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {cartCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-rose-ink px-1 text-[10px] font-medium leading-none text-rose-paper">
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              ) : null}
+            </button>
+          ) : (
+            <LoadingLink
+              href="/cart"
+              aria-label="Cart"
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-line/85 bg-white/75 text-rose-muted transition hover:border-rose-accent/50 hover:text-rose-ink"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
+                <path
+                  d="M6 8h12l-1.2 10.2a1.6 1.6 0 0 1-1.6 1.4H8.8a1.6 1.6 0 0 1-1.6-1.4L6 8Zm3-2.2a3 3 0 0 1 6 0V8H9V5.8Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {cartCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-rose-ink px-1 text-[10px] font-medium leading-none text-rose-paper">
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              ) : null}
+            </LoadingLink>
+          )}
 
           <button
             type="button"

@@ -62,6 +62,8 @@ async function ensureIndexes(database) {
   await database.collection("Product").createIndex({ slug: 1 }, { unique: true });
   await database.collection("Coupon").createIndex({ code: 1 }, { unique: true });
   await database.collection("Order").createIndex({ createdAt: -1 });
+  await database.collection("PaymentAttempt").createIndex({ gatewayOrderId: 1 }, { unique: true });
+  await database.collection("PaymentAttempt").createIndex({ status: 1, createdAt: -1 });
   await database.collection("ContactSubmission").createIndex({ createdAt: -1 });
   console.log("✅ Database indexes ensured");
 }

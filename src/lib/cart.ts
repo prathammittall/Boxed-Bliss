@@ -10,6 +10,7 @@ export type CartItem = {
 
 const CART_KEY = "bb_cart_items";
 const CART_UPDATED_EVENT = "bb-cart-updated";
+const CART_DRAWER_OPEN_EVENT = "bb-cart-drawer-open";
 
 function canUseStorage() {
   return typeof window !== "undefined";
@@ -111,4 +112,4 @@ export function clearCartItems() {
   emitCartUpdated();
 }
 
-export { CART_UPDATED_EVENT };
+export { CART_DRAWER_OPEN_EVENT, CART_UPDATED_EVENT };

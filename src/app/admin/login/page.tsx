@@ -62,7 +62,7 @@ export default function AdminLoginPage() {
               />
             </label>
 
-            <div className="mt-2 flex items-center gap-3">
+            <div className="mt-2 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               <button type="submit" className="btn-primary" disabled={loading}>
                 {loading ? "Signing in..." : "Sign in"}
               </button>
